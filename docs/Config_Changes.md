@@ -8,6 +8,14 @@ All dates in this document are approximate.
 
 ## Changes
 
+20241115: The resonance test has been changed to include slow sweeping
+moves. This change requires that testing point(s) have some clearance
+in X/Y plane (+/- 30 mm from the test point should suffice when using
+the default settings). The new test should generally produce more
+accurate and reliable test results. However, if required, the previous
+test behavior can be restored by adding options `sweeping_period: 0` and
+`accel_per_hz: 75` to the `[resonance_tester]` config section.
+
 20241112: Option `CHIPS=<chip_name>` in `TEST_RESONANCES` and
 `SHAPER_CALIBRATE` requires specifying the full name(s) of the accel
 chip(s). For example, `adxl345 rpi` instead of short name - `rpi`.
