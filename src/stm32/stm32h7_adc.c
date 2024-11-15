@@ -12,8 +12,6 @@
 #include "internal.h" // GPIO
 #include "sched.h" // sched_shutdown
 
-#define ADC_INVALID_PIN 0xFF
-
 #define ADC_TEMPERATURE_PIN 0xfe
 DECL_ENUMERATION("pin", "ADC_TEMPERATURE", ADC_TEMPERATURE_PIN);
 
@@ -26,8 +24,8 @@ DECL_CONSTANT("ADC_MAX", 4095);
 static const uint8_t adc_pins[] = {
 #if CONFIG_MACH_STM32H7
     // ADC1
-    ADC_INVALID_PIN, // PA0_C  ADC12_INP0
-    ADC_INVALID_PIN, // PA1_C  ADC12_INP1
+    0, // PA0_C                ADC12_INP0
+    0, // PA1_C                ADC12_INP1
     GPIO('F', 11), //           ADC1_INP2
     GPIO('A', 6),  //          ADC12_INP3
     GPIO('C', 4),  //          ADC12_INP4
@@ -47,8 +45,8 @@ static const uint8_t adc_pins[] = {
     GPIO('A', 4),  //         ADC12_INP18
     GPIO('A', 5),  //         ADC12_INP19
     // ADC2
-    ADC_INVALID_PIN, // PA0_C  ADC12_INP0
-    ADC_INVALID_PIN, // PA1_C  ADC12_INP1
+    0, // PA0_C                ADC12_INP0
+    0, // PA1_C                ADC12_INP1
     GPIO('F', 13), //           ADC2_INP2
     GPIO('A', 6),  //          ADC12_INP3
     GPIO('C', 4),  //          ADC12_INP4
@@ -63,13 +61,13 @@ static const uint8_t adc_pins[] = {
     GPIO('C', 3),  //         ADC12_INP13
     GPIO('A', 2),  //         ADC12_INP14
     GPIO('A', 3),  //         ADC12_INP15
-    ADC_INVALID_PIN,  //         dac_out1
-    ADC_INVALID_PIN,  //         dac_out2
+    0,             //            dac_out1
+    0,             //            dac_out2
     GPIO('A', 4),  //         ADC12_INP18
     GPIO('A', 5),  //         ADC12_INP19
     // ADC3
-    ADC_INVALID_PIN, // PC2_C   ADC3_INP0
-    ADC_INVALID_PIN, // PC3_C   ADC3_INP1
+    0, // PC2_C                 ADC3_INP0
+    0, // PC3_C                 ADC3_INP1
     GPIO('F', 9) , //           ADC3_INP2
     GPIO('F', 7),  //           ADC3_INP3
     GPIO('F', 5),  //           ADC3_INP4
@@ -87,14 +85,14 @@ static const uint8_t adc_pins[] = {
     GPIO('H', 5),  //          ADC3_INP16
   #if CONFIG_MACH_STM32H723
     ADC_TEMPERATURE_PIN,
-    ADC_INVALID_PIN,
+    0,
   #else
-    ADC_INVALID_PIN, //            Vbat/4
+    0,             //              Vbat/4
     ADC_TEMPERATURE_PIN,//         VSENSE
   #endif
-    ADC_INVALID_PIN, //           VREFINT
+    0,             //             VREFINT
 #elif CONFIG_MACH_STM32G4
-    ADC_INVALID_PIN,        // [0] vssa
+    0,                      // [0] vssa
     GPIO('A', 0),           // [1]
     GPIO('A', 1),           // [2]
     GPIO('A', 2),           // [3]
@@ -107,14 +105,14 @@ static const uint8_t adc_pins[] = {
     GPIO('F', 0),           // [10]
     GPIO('B', 12),          // [11]
     GPIO('B', 1),           // [12]
-    ADC_INVALID_PIN,        // [13] opamp
+    0,                      // [13] opamp
     GPIO('B', 11),          // [14]
     GPIO('B', 0),           // [15]
     ADC_TEMPERATURE_PIN,    // [16] vtemp
-    ADC_INVALID_PIN,        // [17] vbat/3
-    ADC_INVALID_PIN,        // [18] vref
-    ADC_INVALID_PIN,
-    ADC_INVALID_PIN,        // [0] vssa       ADC 2
+    0,                      // [17] vbat/3
+    0,                      // [18] vref
+    0,
+    0,                      // [0] vssa       ADC 2
     GPIO('A', 0),           // [1]
     GPIO('A', 1),           // [2]
     GPIO('A', 6),           // [3]
@@ -130,11 +128,11 @@ static const uint8_t adc_pins[] = {
     GPIO('A', 5),           // [13]
     GPIO('B', 11),          // [14]
     GPIO('B', 15),          // [15]
-    ADC_INVALID_PIN,        // [16] opamp
+    0,                      // [16] opamp
     GPIO('A', 4),           // [17]
-    ADC_INVALID_PIN,        // [18] opamp
+    0,                      // [18] opamp
 #else // stm32l4
-    ADC_INVALID_PIN,        // vref
+    0,                      // vref
     GPIO('C', 0),           // ADC12_IN1 .. 16
     GPIO('C', 1),
     GPIO('C', 2),
@@ -152,7 +150,7 @@ static const uint8_t adc_pins[] = {
     GPIO('B', 0),
     GPIO('B', 1),
     ADC_TEMPERATURE_PIN,    // temp
-    ADC_INVALID_PIN,        // vbat
+    0,                      // vbat
 #endif
 };
 
@@ -191,11 +189,7 @@ gpio_adc_setup(uint32_t pin)
     if (chan >= 2 * ADCIN_BANK_SIZE) {
         chan -= 2 * ADCIN_BANK_SIZE;
         adc = ADC3;
-#if CONFIG_MACH_STM32G4
-        adc_common = ADC345_COMMON;
-#else
         adc_common = ADC3_COMMON;
-#endif
     } else
 #endif
 #ifdef ADC2
@@ -246,10 +240,9 @@ gpio_adc_setup(uint32_t pin)
         // Enable ADC
         adc->ISR = ADC_ISR_ADRDY;
         adc->ISR; // Dummy read to make sure write is flushed
-        while (!(adc->CR & ADC_CR_ADEN))
-            adc->CR |= ADC_CR_ADEN;
+        adc->CR |= ADC_CR_ADEN;
         while (!(adc->ISR & ADC_ISR_ADRDY))
-            ;
+           ;
 
         // Set ADC clock cycles sample time for every channel
         uint32_t av = (aticks           | (aticks << 3)  | (aticks << 6)

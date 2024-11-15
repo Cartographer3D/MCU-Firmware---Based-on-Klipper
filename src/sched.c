@@ -1,6 +1,6 @@
 // Basic scheduling functions and startup/shutdown code.
 //
-// Copyright (C) 2016-2024  Kevin O'Connor <kevin@koconnor.net>
+// Copyright (C) 2016-2021  Kevin O'Connor <kevin@koconnor.net>
 //
 // This file may be distributed under the terms of the GNU GPLv3 license.
 
@@ -19,7 +19,7 @@ static struct timer periodic_timer, sentinel_timer, deleted_timer;
 
 static struct {
     struct timer *timer_list, *last_insert;
-    int8_t tasks_status, tasks_busy;
+    int8_t tasks_status;
     uint8_t shutdown_status, shutdown_reason;
 } SchedStatus = {.timer_list = &periodic_timer, .last_insert = &periodic_timer};
 
@@ -205,15 +205,11 @@ sched_wake_tasks(void)
     SchedStatus.tasks_status = TS_REQUESTED;
 }
 
-// Check if tasks busy (called from low-level timer dispatch code)
+// Check if tasks need to be run
 uint8_t
-sched_check_set_tasks_busy(void)
+sched_tasks_busy(void)
 {
-    // Return busy if tasks never idle between two consecutive calls
-    if (SchedStatus.tasks_busy >= TS_REQUESTED)
-        return 1;
-    SchedStatus.tasks_busy = SchedStatus.tasks_status;
-    return 0;
+    return SchedStatus.tasks_status >= TS_REQUESTED;
 }
 
 // Note that a task is ready to run
@@ -247,7 +243,7 @@ run_tasks(void)
             irq_disable();
             if (SchedStatus.tasks_status != TS_REQUESTED) {
                 // Sleep processor (only run timers) until tasks woken
-                SchedStatus.tasks_status = SchedStatus.tasks_busy = TS_IDLE;
+                SchedStatus.tasks_status = TS_IDLE;
                 do {
                     irq_wait();
                 } while (SchedStatus.tasks_status != TS_REQUESTED);
@@ -297,7 +293,7 @@ static void
 run_shutdown(int reason)
 {
     irq_disable();
-    uint32_t cur = timer_read_time();
+    //uint32_t cur = timer_read_time();
     if (!SchedStatus.shutdown_status)
         SchedStatus.shutdown_reason = reason;
     SchedStatus.shutdown_status = 2;
@@ -307,15 +303,15 @@ run_shutdown(int reason)
     SchedStatus.shutdown_status = 1;
     irq_enable();
 
-    sendf("shutdown clock=%u static_string_id=%hu", cur
-          , SchedStatus.shutdown_reason);
+    //sendf("shutdown clock=%u static_string_id=%hu", cur
+    //      , SchedStatus.shutdown_reason);
 }
 
 // Report the last shutdown reason code
 void
 sched_report_shutdown(void)
 {
-    sendf("is_shutdown static_string_id=%hu", SchedStatus.shutdown_reason);
+//    sendf("is_shutdown static_string_id=%hu", SchedStatus.shutdown_reason);
 }
 
 // Shutdown the machine if not already in the process of shutting down
@@ -348,7 +344,7 @@ sched_main(void)
     extern void ctr_run_initfuncs(void);
     ctr_run_initfuncs();
 
-    sendf("starting");
+    //sendf("starting");
 
     irq_disable();
     int ret = setjmp(shutdown_jmp);

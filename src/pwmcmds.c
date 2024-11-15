@@ -75,9 +75,9 @@ command_config_pwm_out(uint32_t *args)
     p->timer.func = pwm_event;
     move_queue_setup(&p->mq, sizeof(struct pwm_move));
 }
-DECL_COMMAND(command_config_pwm_out,
-             "config_pwm_out oid=%c pin=%u cycle_ticks=%u value=%hu"
-             " default_value=%hu max_duration=%u");
+//DECL_COMMAND(command_config_pwm_out,
+//             "config_pwm_out oid=%c pin=%u cycle_ticks=%u value=%hu"
+//             " default_value=%hu max_duration=%u");
 
 void
 command_queue_pwm_out(uint32_t *args)
@@ -102,7 +102,7 @@ command_queue_pwm_out(uint32_t *args)
     p->timer.waketime = m->waketime;
     sched_add_timer(&p->timer);
 }
-DECL_COMMAND(command_queue_pwm_out, "queue_pwm_out oid=%c clock=%u value=%hu");
+//DECL_COMMAND(command_queue_pwm_out, "queue_pwm_out oid=%c clock=%u value=%hu");
 
 void
 pwm_shutdown(void)
@@ -122,5 +122,5 @@ command_set_pwm_out(uint32_t *args)
 {
     gpio_pwm_setup(args[0], args[1], args[2]);
 }
-DECL_COMMAND(command_set_pwm_out,
-             "set_pwm_out pin=%u cycle_ticks=%u value=%hu");
+//DECL_COMMAND(command_set_pwm_out,
+//             "set_pwm_out pin=%u cycle_ticks=%u value=%hu");

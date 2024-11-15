@@ -69,10 +69,10 @@ command_config_endstop(uint32_t *args)
     struct endstop *e = oid_alloc(args[0], command_config_endstop, sizeof(*e));
     e->pin = gpio_in_setup(args[1], args[2]);
 }
-DECL_COMMAND(command_config_endstop, "config_endstop oid=%c pin=%c pull_up=%c");
+//DECL_COMMAND(command_config_endstop, "config_endstop oid=%c pin=%c pull_up=%c");
 
 // Home an axis
-void
+/*void
 command_endstop_home(uint32_t *args)
 {
     struct endstop *e = oid_lookup(args[0], command_config_endstop);
@@ -93,11 +93,11 @@ command_endstop_home(uint32_t *args)
     e->ts = trsync_oid_lookup(args[6]);
     e->trigger_reason = args[7];
     sched_add_timer(&e->time);
-}
-DECL_COMMAND(command_endstop_home,
-             "endstop_home oid=%c clock=%u sample_ticks=%u sample_count=%c"
-             " rest_ticks=%u pin_value=%c trsync_oid=%c trigger_reason=%c");
-
+}*/
+//DECL_COMMAND(command_endstop_home,
+//             "endstop_home oid=%c clock=%u sample_ticks=%u sample_count=%c"
+//             " rest_ticks=%u pin_value=%c trsync_oid=%c trigger_reason=%c");
+/*
 void
 command_endstop_query_state(uint32_t *args)
 {
@@ -111,5 +111,5 @@ command_endstop_query_state(uint32_t *args)
 
     sendf("endstop_state oid=%c homing=%c next_clock=%u pin_value=%c"
           , oid, !!(eflags & ESF_HOMING), nextwake, gpio_in_read(e->pin));
-}
-DECL_COMMAND(command_endstop_query_state, "endstop_query_state oid=%c");
+}*/
+//DECL_COMMAND(command_endstop_query_state, "endstop_query_state oid=%c");

@@ -31,9 +31,9 @@ command_spi_set_software_bus(uint32_t *args)
     ss->mode = mode;
     spidev_set_software_bus(spi, ss);
 }
-DECL_COMMAND(command_spi_set_software_bus,
-             "spi_set_software_bus oid=%c miso_pin=%u mosi_pin=%u sclk_pin=%u"
-             " mode=%u rate=%u");
+//DECL_COMMAND(command_spi_set_software_bus,
+//             "spi_set_software_bus oid=%c miso_pin=%u mosi_pin=%u sclk_pin=%u"
+//             " mode=%u rate=%u");
 
 void
 spi_software_prepare(struct spi_software *ss)

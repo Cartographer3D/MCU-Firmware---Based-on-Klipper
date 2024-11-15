@@ -28,7 +28,7 @@ command_config_sdio(uint32_t *args)
     sdio->blocksize = args[1];
     sdio->speed = 400000; // Initial speed set to ~400khz
 }
-DECL_COMMAND(command_config_sdio, "config_sdio oid=%c blocksize=%u");
+//DECL_COMMAND(command_config_sdio, "config_sdio oid=%c blocksize=%u");
 
 struct sdiodev_s *
 sdiodev_oid_lookup(uint8_t oid)
@@ -42,7 +42,7 @@ command_sdio_set_bus(uint32_t *args)
     struct sdiodev_s *sdio = sdiodev_oid_lookup(args[0]);
     sdio->sdio_config = sdio_setup(args[1]);
 }
-DECL_COMMAND(command_sdio_set_bus, "sdio_set_bus oid=%c sdio_bus=%u");
+//DECL_COMMAND(command_sdio_set_bus, "sdio_set_bus oid=%c sdio_bus=%u");
 
 void
 command_sdio_set_speed(uint32_t *args)
@@ -51,9 +51,9 @@ command_sdio_set_speed(uint32_t *args)
     sdio->speed = args[1];
     sdio_set_speed(sdio->sdio_config, sdio->speed);
 }
-DECL_COMMAND(command_sdio_set_speed, "sdio_set_speed oid=%c speed=%u");
+//DECL_COMMAND(command_sdio_set_speed, "sdio_set_speed oid=%c speed=%u");
 
-void
+/*void
 command_sdio_send_command(uint32_t *args)
 {
     uint8_t oid = args[0];
@@ -147,7 +147,7 @@ command_sdio_read_data_buffer(uint32_t *args)
 }
 DECL_COMMAND(command_sdio_read_data_buffer
              , "sdio_read_data_buffer oid=%c offset=%u len=%c");
-
+*/
 void
 command_sdio_write_data_buffer(uint32_t *args)
 {
@@ -162,5 +162,5 @@ command_sdio_write_data_buffer(uint32_t *args)
         memcpy(buf, write_data, write_data_len);
     }
 }
-DECL_COMMAND(command_sdio_write_data_buffer
-             , "sdio_write_data_buffer oid=%c offset=%u data=%*s");
+//DECL_COMMAND(command_sdio_write_data_buffer
+//             , "sdio_write_data_buffer oid=%c offset=%u data=%*s");

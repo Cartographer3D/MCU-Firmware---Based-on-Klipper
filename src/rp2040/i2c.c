@@ -11,43 +11,14 @@
 #include "internal.h" // pclock, gpio_peripheral
 #include "hardware/regs/resets.h" // RESETS_RESET_I2C*_BITS
 #include "hardware/structs/i2c.h"
-#include "i2ccmds.h" // I2C_BUS_SUCCESS
 
 struct i2c_info {
     i2c_hw_t *i2c;
     uint8_t sda_pin, scl_pin, pclk;
 };
 
-DECL_ENUMERATION("i2c_bus", "i2c0a", 0);
-DECL_ENUMERATION("i2c_bus", "i2c0b", 1);
 DECL_ENUMERATION("i2c_bus", "i2c0c", 2);
-DECL_ENUMERATION("i2c_bus", "i2c0d", 3);
-DECL_ENUMERATION("i2c_bus", "i2c0e", 4);
-DECL_ENUMERATION("i2c_bus", "i2c0f", 5);
-DECL_ENUMERATION("i2c_bus", "i2c0g", 6);
-DECL_ENUMERATION("i2c_bus", "i2c0h", 7);
-DECL_ENUMERATION("i2c_bus", "i2c1a", 8);
-DECL_ENUMERATION("i2c_bus", "i2c1b", 9);
-DECL_ENUMERATION("i2c_bus", "i2c1c", 10);
-DECL_ENUMERATION("i2c_bus", "i2c1d", 11);
-DECL_ENUMERATION("i2c_bus", "i2c1e", 12);
-DECL_ENUMERATION("i2c_bus", "i2c1f", 13);
-DECL_ENUMERATION("i2c_bus", "i2c1g", 14);
-DECL_CONSTANT_STR("BUS_PINS_i2c0a", "gpio0,gpio1");
-DECL_CONSTANT_STR("BUS_PINS_i2c0b", "gpio4,gpio5");
 DECL_CONSTANT_STR("BUS_PINS_i2c0c", "gpio8,gpio9");
-DECL_CONSTANT_STR("BUS_PINS_i2c0d", "gpio12,gpio13");
-DECL_CONSTANT_STR("BUS_PINS_i2c0e", "gpio16,gpio17");
-DECL_CONSTANT_STR("BUS_PINS_i2c0f", "gpio20,gpio21");
-DECL_CONSTANT_STR("BUS_PINS_i2c0g", "gpio24,gpio25");
-DECL_CONSTANT_STR("BUS_PINS_i2c0h", "gpio28,gpio29");
-DECL_CONSTANT_STR("BUS_PINS_i2c1a", "gpio2,gpio3");
-DECL_CONSTANT_STR("BUS_PINS_i2c1b", "gpio6,gpio7");
-DECL_CONSTANT_STR("BUS_PINS_i2c1c", "gpio10,gpio11");
-DECL_CONSTANT_STR("BUS_PINS_i2c1d", "gpio14,gpio15");
-DECL_CONSTANT_STR("BUS_PINS_i2c1e", "gpio18,gpio19");
-DECL_CONSTANT_STR("BUS_PINS_i2c1f", "gpio22,gpio23");
-DECL_CONSTANT_STR("BUS_PINS_i2c1g", "gpio26,gpio27");
 
 static const struct i2c_info i2c_bus[] = {
     { i2c0_hw,  0,  1, RESETS_RESET_I2C0_BITS },
@@ -133,8 +104,8 @@ i2c_stop(i2c_hw_t *i2c)
     i2c->enable = 0;
 }
 
-static int
-i2c_do_write(i2c_hw_t *i2c, uint8_t write_len, uint8_t *write
+static void
+i2c_do_write(i2c_hw_t *i2c, uint8_t addr, uint8_t write_len, uint8_t *write
              , uint8_t send_stop, uint32_t timeout)
 {
     for (int i = 0; i < write_len; i++) {
@@ -144,7 +115,7 @@ i2c_do_write(i2c_hw_t *i2c, uint8_t write_len, uint8_t *write
         // Wait until there's a spot in the TX FIFO
         while (i2c->txflr == 16) {
             if (!timer_is_before(timer_read_time(), timeout))
-                return I2C_BUS_TIMEOUT;
+                shutdown("i2c timeout");
         }
 
         i2c->data_cmd = first << I2C_IC_DATA_CMD_RESTART_LSB
@@ -153,39 +124,24 @@ i2c_do_write(i2c_hw_t *i2c, uint8_t write_len, uint8_t *write
     }
 
     if (!send_stop)
-        return I2C_BUS_SUCCESS;
+        return;
 
     // Drain the transmit buffer
     while (i2c->txflr != 0) {
         if (!timer_is_before(timer_read_time(), timeout))
-            return I2C_BUS_TIMEOUT;
+            shutdown("i2c timeout");
     }
-
-    if (i2c->raw_intr_stat & I2C_IC_RAW_INTR_STAT_TX_ABRT_BITS) {
-        uint32_t abort_source = i2c->tx_abrt_source;
-        if (abort_source & I2C_IC_TX_ABRT_SOURCE_ABRT_7B_ADDR_NOACK_BITS)
-        {
-            i2c->clr_tx_abrt;
-            return I2C_BUS_START_NACK;
-        }
-        if (abort_source & I2C_IC_TX_ABRT_SOURCE_ABRT_TXDATA_NOACK_BITS)
-        {
-            i2c->clr_tx_abrt;
-            return I2C_BUS_NACK;
-        }
-    }
-    return I2C_BUS_SUCCESS;
 }
 
-static int
-i2c_do_read(i2c_hw_t *i2c, uint8_t read_len, uint8_t *read
+static void
+i2c_do_read(i2c_hw_t *i2c, uint8_t addr, uint8_t read_len, uint8_t *read
             , uint32_t timeout)
 {
     int have_read = 0;
     int to_send = read_len;
     while (have_read < read_len) {
         if (!timer_is_before(timer_read_time(), timeout))
-            return I2C_BUS_TIMEOUT;
+            shutdown("i2c timeout");
 
         if (to_send > 0 && i2c->txflr < 16) {
             int first = to_send == read_len;
@@ -202,47 +158,30 @@ i2c_do_read(i2c_hw_t *i2c, uint8_t read_len, uint8_t *read
             *read++ = i2c->data_cmd & 0xFF;
             have_read++;
         }
-
-        if (i2c->raw_intr_stat & I2C_IC_RAW_INTR_STAT_TX_ABRT_BITS) {
-            uint32_t abort_source = i2c->tx_abrt_source;
-            if (abort_source & I2C_IC_TX_ABRT_SOURCE_ABRT_7B_ADDR_NOACK_BITS) {
-                i2c->clr_tx_abrt;
-                return I2C_BUS_START_READ_NACK;
-            }
-        }
     }
-
-    return I2C_BUS_SUCCESS;
 }
 
-int
+void
 i2c_write(struct i2c_config config, uint8_t write_len, uint8_t *write)
 {
     i2c_hw_t *i2c = (i2c_hw_t*)config.i2c;
     uint32_t timeout = timer_read_time() + timer_from_us(5000);
-    int ret;
 
     i2c_start(i2c, config.addr);
-    ret = i2c_do_write(i2c, write_len, write, 1, timeout);
+    i2c_do_write(i2c, config.addr, write_len, write, 1, timeout);
     i2c_stop(i2c);
-    return ret;
 }
 
-int
+void
 i2c_read(struct i2c_config config, uint8_t reg_len, uint8_t *reg
          , uint8_t read_len, uint8_t *read)
 {
     i2c_hw_t *i2c = (i2c_hw_t*)config.i2c;
     uint32_t timeout = timer_read_time() + timer_from_us(5000);
-    int ret = I2C_BUS_SUCCESS;
 
     i2c_start(i2c, config.addr);
     if (reg_len != 0)
-        ret = i2c_do_write(i2c, reg_len, reg, 0, timeout);
-    if (ret != I2C_BUS_SUCCESS)
-        goto out;
-    ret = i2c_do_read(i2c, read_len, read, timeout);
-out:
+        i2c_do_write(i2c, config.addr, reg_len, reg, 0, timeout);
+    i2c_do_read(i2c, config.addr, read_len, read, timeout);
     i2c_stop(i2c);
-    return ret;
 }

@@ -168,12 +168,6 @@ The following information is available in the
   module. These settings may differ from the config file if a
   `SET_RETRACTION` command alters them.
 
-## gcode
-
-The following information is available in the `gcode` object:
-- `commands`: Returns a list of all currently available commands. For each
-  command, if a help string is defined it will also be provided.
-
 ## gcode_button
 
 The following information is available in
@@ -251,11 +245,6 @@ object is available if any heater is defined):
   temperature sensors by their full config section names,
   e.g. `["extruder", "heater_bed", "heater_generic my_custom_heater",
   "temperature_sensor electronics_temp"]`.
-- `available_monitors`: Returns a list of all currently available
-  temperature monitors by their full config section names,
-  e.g. `["tmc2240 stepper_x"]`.  While a temperature sensor is always
-  available to read, a temperature monitor may not be available and
-  will return null in such case.
 
 ## idle_timeout
 
@@ -324,8 +313,7 @@ is defined):
 ## output_pin
 
 The following information is available in
-[output_pin some_name](Config_Reference.md#output_pin) and
-[pwm_tool some_name](Config_Reference.md#pwm_tool) objects:
+[output_pin some_name](Config_Reference.md#output_pin) objects:
 - `value`: The "value" of the pin, as set by a `SET_PIN` command.
 
 ## palette2
@@ -374,13 +362,6 @@ is defined):
   template expansion, the PROBE (or similar) command must be run prior
   to the macro containing this reference.
 
-## pwm_cycle_time
-
-The following information is available in
-[pwm_cycle_time some_name](Config_Reference.md#pwm_cycle_time)
-objects:
-- `value`: The "value" of the pin, as set by a `SET_PIN` command.
-
 ## quad_gantry_level
 
 The following information is available in the `quad_gantry_level` object
@@ -405,8 +386,6 @@ object:
 - `error`: Returns True if the most recent `SCREWS_TILT_CALCULATE`
   command included the `MAX_DEVIATION` parameter and any of the probed
   screw points exceeded the specified `MAX_DEVIATION`.
-- `max_deviation`: Return the last `MAX_DEVIATION` value of the most
-  recent `SCREWS_TILT_CALCULATE` command.
 - `results["<screw>"]`: A dictionary containing the following keys:
   - `z`: The measured Z height of the screw location.
   - `sign`: A string specifying the direction to turn to screw for the
@@ -445,15 +424,13 @@ The following information is available in
 
 [bme280 config_section_name](Config_Reference.md#bmp280bme280bme680-temperature-sensor),
 [htu21d config_section_name](Config_Reference.md#htu21d-sensor),
-[sht3x config_section_name](Config_Reference.md#sht31-sensor),
 [lm75 config_section_name](Config_Reference.md#lm75-temperature-sensor),
-[temperature_host config_section_name](Config_Reference.md#host-temperature-sensor)
 and
-[temperature_combined config_section_name](Config_Reference.md#combined-temperature-sensor)
+[temperature_host config_section_name](Config_Reference.md#host-temperature-sensor)
 objects:
 - `temperature`: The last read temperature from the sensor.
 - `humidity`, `pressure`, `gas`: The last read values from the sensor
-  (only on bme280, htu21d, sht3x and lm75 sensors).
+  (only on bme280, htu21d, and lm75 sensors).
 
 ## temperature_fan
 
@@ -512,7 +489,7 @@ The following information is available in the `toolhead` object
   limit value (eg, `axis_minimum.x`, `axis_maximum.z`).
 - For Delta printers the `cone_start_z` is the max z height at
   maximum radius (`printer.toolhead.cone_start_z`).
-- `max_velocity`, `max_accel`, `minimum_cruise_ratio`,
+- `max_velocity`, `max_accel`, `max_accel_to_decel`,
   `square_corner_velocity`: The current printing limits that are in
   effect. This may differ from the config file settings if a
   `SET_VELOCITY_LIMIT` (or `M204`) command alters them at run-time.
@@ -524,11 +501,10 @@ The following information is available in the `toolhead` object
 
 The following information is available in
 [dual_carriage](Config_Reference.md#dual_carriage)
-on a cartesian, hybrid_corexy or hybrid_corexz robot
-- `carriage_0`: The mode of the carriage 0. Possible values are:
-  "INACTIVE" and "PRIMARY".
-- `carriage_1`: The mode of the carriage 1. Possible values are:
-  "INACTIVE", "PRIMARY", "COPY", and "MIRROR".
+on a hybrid_corexy or hybrid_corexz robot
+- `mode`: The current mode. Possible values are: "FULL_CONTROL"
+- `active_carriage`: The current active carriage.
+Possible values are: "CARRIAGE_0", "CARRIAGE_1"
 
 ## virtual_sdcard
 

@@ -22,19 +22,19 @@ config BOARD_DIRECTORY
 choice
     prompt "Processor model"
     config MACH_SAM3X8E
-        bool "SAM3x8e"
+        bool "SAM3x8e (Arduino Due)"
         select MACH_SAM3X
     config MACH_SAM3X8C
-        bool "SAM3x8c"
+        bool "SAM3x8c (Printrboard G2)"
         select MACH_SAM3X
     config MACH_SAM4S8C
-        bool "SAM4s8c"
+        bool "SAM4s8c (Duet Maestro)"
         select MACH_SAM4S
     config MACH_SAM4E8E
-        bool "SAM4e8e"
+        bool "SAM4e8e (Duet Wifi/Eth)"
         select MACH_SAM4E
     config MACH_SAME70Q20B
-        bool "SAME70Q20B"
+        bool "SAME70Q20B (Duet 3 6HC)"
         select MACH_SAME70
 endchoice
 
@@ -50,9 +50,6 @@ config MACH_SAM4E
     select MACH_SAM4
 config MACH_SAME70
     bool
-config HAVE_SAM_CANBUS
-    bool
-    default y if MACH_SAME70
 
 config MCU
     string
@@ -70,7 +67,6 @@ config CLOCK_FREQ
 
 config FLASH_SIZE
     hex
-    default 0x20000 if MACH_SAME70
     default 0x80000
 
 config FLASH_BOOT_ADDRESS
@@ -85,7 +81,8 @@ config RAM_START
 config RAM_SIZE
     hex
     default 0x18000 if MACH_SAM3X
-    default 0x20000 if MACH_SAM4 || MACH_SAME70
+    default 0x20000 if MACH_SAM4
+    default 0x40000 if MACH_SAME70
 
 config STACK_SIZE
     int
@@ -93,24 +90,8 @@ config STACK_SIZE
 
 config FLASH_APPLICATION_ADDRESS
     hex
-    default 0x0 if MACH_SAME70
-    default 0x400000 if MACH_SAM4
+    default 0x400000 if MACH_SAM4 || MACH_SAME70
     default 0x80000
-
-config ARMCM_ITCM_FLASH_MIRROR_START
-    depends on MACH_SAME70
-    hex
-    default 0x400000
-
-config ARMCM_DTCM_START
-    depends on MACH_SAME70
-    hex
-    default 0x20000000
-
-config ARMCM_DTCM_SIZE
-    depends on MACH_SAME70
-    hex
-    default 0x20000
 
 choice
     prompt "Communication interface"
@@ -120,32 +101,6 @@ choice
     config ATSAM_SERIAL
         bool "Serial"
         select SERIAL
-    config ATSAM_MMENU_CANBUS_PC12_PD12
-        bool "CAN bus (on PC12/PD12)"
-        depends on HAVE_SAM_CANBUS
-        select CANSERIAL
-    config ATSAM_MMENU_CANBUS_PB3_PB2
-        bool "CAN bus (on PB3/PB2)"
-        depends on HAVE_SAM_CANBUS
-        select CANSERIAL
-    config ATSAM_USBCANBUS
-        bool "USB to CAN bus bridge"
-        depends on HAVE_SAM_CANBUS
-        select USBCANBUS
 endchoice
-choice
-    prompt "CAN bus interface" if USBCANBUS
-    config ATSAM_CMENU_CANBUS_PC12_PD12
-        bool "CAN bus (on PC12/PD12)"
-    config ATSAM_CMENU_CANBUS_PB3_PB2
-        bool "CAN bus (on PB3/PB2)"
-endchoice
-
-config ATSAM_CANBUS_PC12_PD12
-    bool
-    default y if ATSAM_MMENU_CANBUS_PC12_PD12 || ATSAM_CMENU_CANBUS_PC12_PD12
-config ATSAM_CANBUS_PB3_PB2
-    bool
-    default y if ATSAM_MMENU_CANBUS_PB3_PB2 || ATSAM_CMENU_CANBUS_PB3_PB2
 
 endif

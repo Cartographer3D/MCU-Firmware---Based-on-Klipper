@@ -1,11 +1,11 @@
 # Measuring Resonances
 
-Klipper has built-in support for the ADXL345, MPU-9250 and LIS2DW compatible
+Klipper has built-in support for the ADXL345 and MPU-9250 compatible
 accelerometers which can be used to measure resonance frequencies of the printer
 for different axes, and auto-tune [input shapers](Resonance_Compensation.md) to
 compensate for resonances. Note that using accelerometers requires some
-soldering and crimping. The ADXL345/LIS2DW can be connected to the SPI interface
-of a Raspberry Pi or MCU board (it needs to be reasonably fast). The MPU family can
+soldering and crimping. The ADXL345 can be connected to the SPI interface of a
+Raspberry Pi or MCU board (it needs to be reasonably fast). The MPU family can
 be connected to the I2C interface of a Raspberry Pi directly, or to an I2C
 interface of an MCU board that supports 400kbit/s *fast mode* in Klipper.
 
@@ -13,7 +13,7 @@ When sourcing accelerometers, be aware that there are a variety of different PCB
 board designs and different clones of them. If it is going to be connected to a
 5V printer MCU ensure it has a voltage regulator and level shifters.
 
-For ADXL345s/LIS2DWs, make sure that the board supports SPI mode (a small number of
+For ADXL345s, make sure that the board supports SPI mode (a small number of
 boards appear to be hard-configured for I2C by pulling SDO to GND).
 
 For MPU-9250/MPU-9255/MPU-6515/MPU-6050/MPU-6500s there are also a variety of
@@ -207,25 +207,17 @@ software dependencies not installed by default. First, run on your Raspberry Pi
 the following commands:
 ```
 sudo apt update
-sudo apt install python3-numpy python3-matplotlib libatlas-base-dev libopenblas-dev
+sudo apt install python3-numpy python3-matplotlib libatlas-base-dev
 ```
 
 Next, in order to install NumPy in the Klipper environment, run the command:
 ```
-~/klippy-env/bin/pip install -v "numpy<1.26"
+~/klippy-env/bin/pip install -v numpy
 ```
 Note that, depending on the performance of the CPU, it may take *a lot*
 of time, up to 10-20 minutes. Be patient and wait for the completion of
 the installation. On some occasions, if the board has too little RAM
-the installation may fail and you will need to enable swap. Also note
-the forced version, due to newer versions of NumPY having requirements
-that may not be satisfied in some klipper python environments.
-
-Once installed please check that no errors show from the command:
-```
-~/klippy-env/bin/python -c 'import numpy;'
-```
-The correct output should simply be a new line.
+the installation may fail and you will need to enable swap.
 
 #### Configure ADXL345 With RPi
 
@@ -312,26 +304,6 @@ you'll also want to modify your `printer.cfg` file to include this:
 ```
 
 Restart Klipper via the `RESTART` command.
-
-#### Configure LIS2DW series
-
-```
-[mcu lis]
-# Change <mySerial> to whatever you found above. For example,
-# usb-Klipper_rp2040_E661640843545B2E-if00
-serial: /dev/serial/by-id/usb-Klipper_rp2040_<mySerial>
-
-[lis2dw]
-cs_pin: lis:gpio1
-spi_bus: spi0a
-axes_map: x,z,y
-
-[resonance_tester]
-accel_chip: lis2dw
-probe_points:
-    # Somewhere slightly above the middle of your print bed
-    147,154, 20
-```
 
 #### Configure MPU-6000/9000 series With RPi
 
@@ -458,11 +430,7 @@ TEST_RESONANCES AXIS=Y
 ```
 This will generate 2 CSV files (`/tmp/resonances_x_*.csv` and
 `/tmp/resonances_y_*.csv`). These files can be processed with the stand-alone
-script on a Raspberry Pi. This script is intended to be run with a single CSV
-file for each axis measured, although it can be used with multiple CSV files
-if you desire to average the results. Averaging results can be useful, for
-example, if resonance tests were done at multiple test points. Delete the extra
-CSV files if you do not desire to average them.
+script on a Raspberry Pi. To do that, run the following commands:
 ```
 ~/klipper/scripts/calibrate_shaper.py /tmp/resonances_x_*.csv -o /tmp/shaper_calibrate_x.png
 ~/klipper/scripts/calibrate_shaper.py /tmp/resonances_y_*.csv -o /tmp/shaper_calibrate_y.png
@@ -673,19 +641,6 @@ The same notice applies to the input shaper
 `SHAPER_CALIBRATE` command: it is still necessary to choose the right
 `max_accel` value after the auto-calibration, and the suggested acceleration
 limits will not be applied automatically.
-
-Keep in mind that the maximum acceleration without too much smoothing depends
-on the `square_corner_velocity`. The general recommendation is not to change
-it from its default value 5.0, and this is the value used by default by the
-`calibrate_shaper.py` script. If you did change it though, you should inform
-the script about it by passing `--square_corner_velocity=...` parameter, e.g.
-```
-~/klipper/scripts/calibrate_shaper.py /tmp/resonances_x_*.csv -o /tmp/shaper_calibrate_x.png --square_corner_velocity=10.0
-```
-so that it can calculate the maximum acceleration recommendations correctly.
-Note that the `SHAPER_CALIBRATE` command already takes the configured
-`square_corner_velocity` parameter into account, and there is no need
-to specify it explicitly.
 
 If you are doing a shaper re-calibration and the reported smoothing for the
 suggested shaper configuration is almost the same as what you got during the

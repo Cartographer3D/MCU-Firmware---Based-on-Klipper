@@ -119,8 +119,7 @@ canhw_send(struct canbus_msg *msg)
     txfifo->dlc_section = (msg->dlc & 0x0f) << 16;
     txfifo->data[0] = msg->data32[0];
     txfifo->data[1] = msg->data32[1];
-    __DMB();
-    CANx->TXBAR.reg;
+    barrier();
     CANx->TXBAR.reg = ((uint32_t)1 << w_index);
     return CANMSG_DATA_LEN(msg);
 }

@@ -115,9 +115,9 @@ command_config_hd44780(uint32_t *args)
     if (delay_ticks > diff)
         h->cmd_wait_ticks = delay_ticks - diff;
 }
-DECL_COMMAND(command_config_hd44780,
-             "config_hd44780 oid=%c rs_pin=%u e_pin=%u"
-             " d4_pin=%u d5_pin=%u d6_pin=%u d7_pin=%u delay_ticks=%u");
+//DECL_COMMAND(command_config_hd44780,
+//             "config_hd44780 oid=%c rs_pin=%u e_pin=%u"
+//             " d4_pin=%u d5_pin=%u d6_pin=%u d7_pin=%u delay_ticks=%u");
 
 void
 command_hd44780_send_cmds(uint32_t *args)
@@ -127,7 +127,7 @@ command_hd44780_send_cmds(uint32_t *args)
     uint8_t len = args[1], *cmds = command_decode_ptr(args[2]);
     hd44780_xmit(h, len, cmds);
 }
-DECL_COMMAND(command_hd44780_send_cmds, "hd44780_send_cmds oid=%c cmds=%*s");
+//DECL_COMMAND(command_hd44780_send_cmds, "hd44780_send_cmds oid=%c cmds=%*s");
 
 void
 command_hd44780_send_data(uint32_t *args)
@@ -137,7 +137,7 @@ command_hd44780_send_data(uint32_t *args)
     uint8_t len = args[1], *data = command_decode_ptr(args[2]);
     hd44780_xmit(h, len, data);
 }
-DECL_COMMAND(command_hd44780_send_data, "hd44780_send_data oid=%c data=%*s");
+//DECL_COMMAND(command_hd44780_send_data, "hd44780_send_data oid=%c data=%*s");
 
 void
 hd44780_shutdown(void)

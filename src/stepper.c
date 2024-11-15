@@ -206,8 +206,8 @@ command_config_stepper(uint32_t *args)
         s->time.func = stepper_event_full;
     }
 }
-DECL_COMMAND(command_config_stepper, "config_stepper oid=%c step_pin=%c"
-             " dir_pin=%c invert_step=%c step_pulse_ticks=%u");
+//DECL_COMMAND(command_config_stepper, "config_stepper oid=%c step_pin=%c"
+//             " dir_pin=%c invert_step=%c step_pulse_ticks=%u");
 
 // Return the 'struct stepper' for a given stepper oid
 static struct stepper *
@@ -248,8 +248,8 @@ command_queue_step(uint32_t *args)
     }
     irq_enable();
 }
-DECL_COMMAND(command_queue_step,
-             "queue_step oid=%c interval=%u count=%hu add=%hi");
+//DECL_COMMAND(command_queue_step,
+//             "queue_step oid=%c interval=%u count=%hu add=%hi");
 
 // Set the direction of the next queued step
 void
@@ -261,7 +261,7 @@ command_set_next_step_dir(uint32_t *args)
     s->flags = (s->flags & ~SF_NEXT_DIR) | nextdir;
     irq_enable();
 }
-DECL_COMMAND(command_set_next_step_dir, "set_next_step_dir oid=%c dir=%c");
+//DECL_COMMAND(command_set_next_step_dir, "set_next_step_dir oid=%c dir=%c");
 
 // Set an absolute time that the next step will be relative to
 void
@@ -276,7 +276,7 @@ command_reset_step_clock(uint32_t *args)
     s->flags &= ~SF_NEED_RESET;
     irq_enable();
 }
-DECL_COMMAND(command_reset_step_clock, "reset_step_clock oid=%c clock=%u");
+//DECL_COMMAND(command_reset_step_clock, "reset_step_clock oid=%c clock=%u");
 
 // Return the current stepper position.  Caller must disable irqs.
 static uint32_t
@@ -295,17 +295,17 @@ stepper_get_position(struct stepper *s)
 }
 
 // Report the current position of the stepper
-void
-command_stepper_get_position(uint32_t *args)
-{
-    uint8_t oid = args[0];
-    struct stepper *s = stepper_oid_lookup(oid);
-    irq_disable();
-    uint32_t position = stepper_get_position(s);
-    irq_enable();
-    sendf("stepper_position oid=%c pos=%i", oid, position - POSITION_BIAS);
-}
-DECL_COMMAND(command_stepper_get_position, "stepper_get_position oid=%c");
+//void
+//command_stepper_get_position(uint32_t *args)
+//{
+//    uint8_t oid = args[0];
+//    struct stepper *s = stepper_oid_lookup(oid);
+//    irq_disable();
+//    uint32_t position = stepper_get_position(s);
+//    irq_enable();
+    //sendf("stepper_position oid=%c pos=%i", oid, position - POSITION_BIAS);
+//}
+//DECL_COMMAND(command_stepper_get_position, "stepper_get_position oid=%c");
 
 // Stop all moves for a given stepper (caller must disable IRQs)
 static void

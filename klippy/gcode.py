@@ -104,7 +104,6 @@ class GCodeDispatch:
         self.ready_gcode_handlers = {}
         self.mux_commands = {}
         self.gcode_help = {}
-        self.status_commands = {}
         # Register commands needed before config file is loaded
         handlers = ['M110', 'M112', 'M115',
                     'RESTART', 'FIRMWARE_RESTART', 'ECHO', 'STATUS', 'HELP']
@@ -127,7 +126,6 @@ class GCodeDispatch:
                 del self.ready_gcode_handlers[cmd]
             if cmd in self.base_gcode_handlers:
                 del self.base_gcode_handlers[cmd]
-            self._build_status_commands()
             return old_cmd
         if cmd in self.ready_gcode_handlers:
             raise self.printer.config_error(
@@ -140,7 +138,6 @@ class GCodeDispatch:
             self.base_gcode_handlers[cmd] = func
         if desc is not None:
             self.gcode_help[cmd] = desc
-        self._build_status_commands()
     def register_mux_command(self, cmd, key, value, func, desc=None):
         prev = self.mux_commands.get(cmd)
         if prev is None:
@@ -159,14 +156,6 @@ class GCodeDispatch:
         prev_values[value] = func
     def get_command_help(self):
         return dict(self.gcode_help)
-    def get_status(self, eventtime):
-        return {'commands': self.status_commands}
-    def _build_status_commands(self):
-        commands = {cmd: {} for cmd in self.gcode_handlers}
-        for cmd in self.gcode_help:
-            if cmd in commands:
-                commands[cmd]['help'] = self.gcode_help[cmd]
-        self.status_commands = commands
     def register_output_handler(self, cb):
         self.output_callbacks.append(cb)
     def _handle_shutdown(self):
@@ -174,14 +163,12 @@ class GCodeDispatch:
             return
         self.is_printer_ready = False
         self.gcode_handlers = self.base_gcode_handlers
-        self._build_status_commands()
         self._respond_state("Shutdown")
     def _handle_disconnect(self):
         self._respond_state("Disconnect")
     def _handle_ready(self):
         self.is_printer_ready = True
         self.gcode_handlers = self.ready_gcode_handlers
-        self._build_status_commands()
         self._respond_state("Ready")
     # Parse input into commands
     args_r = re.compile('([A-Z_]+|[A-Z*/])')
@@ -406,7 +393,7 @@ class GCodeIO:
         self._dump_debug()
         if self.is_fileinput:
             self.printer.request_exit('error_exit')
-    m112_r = re.compile(r'^(?:[nN][0-9]+)?\s*[mM]112(?:\s|$)')
+    m112_r = re.compile('^(?:[nN][0-9]+)?\s*[mM]112(?:\s|$)')
     def _process_data(self, eventtime):
         # Read input, separate by newline, and add to pending_commands
         try:

@@ -19,7 +19,7 @@
  * Pin mappings
  ****************************************************************/
 
-DECL_ENUMERATION_RANGE("pin", "gpio0", 0, 30);
+//DECL_ENUMERATION_RANGE("pin", "gpio0", 0, 30);
 
 // Set the mode and extended function of a pin
 void

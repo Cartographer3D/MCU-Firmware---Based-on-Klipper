@@ -1,6 +1,6 @@
 // Handling of synchronized "trigger" dispatch
 //
-// Copyright (C) 2016-2024  Kevin O'Connor <kevin@koconnor.net>
+// Copyright (C) 2016-2021  Kevin O'Connor <kevin@koconnor.net>
 //
 // This file may be distributed under the terms of the GNU GPLv3 license.
 
@@ -23,14 +23,13 @@ enum { TSF_CAN_TRIGGER=1<<0, TSF_REPORT=1<<2 };
 
 static struct task_wake trsync_wake;
 
-// Activate a trigger
+// Activate a trigger (caller must disable IRQs)
 void
 trsync_do_trigger(struct trsync *ts, uint8_t reason)
 {
-    irqstatus_t flag = irq_save();
     uint8_t flags = ts->flags;
     if (!(flags & TSF_CAN_TRIGGER))
-        goto done;
+        return;
     ts->trigger_reason = reason;
     ts->flags = (flags & ~TSF_CAN_TRIGGER) | TSF_REPORT;
     // Dispatch signals
@@ -43,8 +42,6 @@ trsync_do_trigger(struct trsync *ts, uint8_t reason)
         func(tss, reason);
     }
     sched_wake_task(&trsync_wake);
-done:
-    irq_restore(flag);
 }
 
 // Timeout handler

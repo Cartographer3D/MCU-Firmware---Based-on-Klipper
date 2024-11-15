@@ -81,7 +81,7 @@ command_config_buttons(uint32_t *args)
     b->button_count = button_count;
     b->time.func = buttons_event;
 }
-DECL_COMMAND(command_config_buttons, "config_buttons oid=%c button_count=%c");
+//DECL_COMMAND(command_config_buttons, "config_buttons oid=%c button_count=%c");
 
 void
 command_buttons_add(uint32_t *args)
@@ -92,8 +92,8 @@ command_buttons_add(uint32_t *args)
         shutdown("Set button past maximum button count");
     b->pins[pos] = gpio_in_setup(args[2], args[3]);
 }
-DECL_COMMAND(command_buttons_add,
-             "buttons_add oid=%c pos=%c pin=%u pull_up=%c");
+//DECL_COMMAND(command_buttons_add,
+//             "buttons_add oid=%c pos=%c pin=%u pull_up=%c");
 
 void
 command_buttons_query(uint32_t *args)
@@ -112,9 +112,9 @@ command_buttons_query(uint32_t *args)
         return;
     sched_add_timer(&b->time);
 }
-DECL_COMMAND(command_buttons_query,
-             "buttons_query oid=%c clock=%u rest_ticks=%u retransmit_count=%c"
-             " invert=%c");
+//DECL_COMMAND(command_buttons_query,
+//             "buttons_query oid=%c clock=%u rest_ticks=%u retransmit_count=%c"
+//             " invert=%c");
 
 void
 command_buttons_ack(uint32_t *args)
@@ -134,9 +134,9 @@ command_buttons_ack(uint32_t *args)
     }
     irq_enable();
 }
-DECL_COMMAND(command_buttons_ack, "buttons_ack oid=%c count=%c");
+//DECL_COMMAND(command_buttons_ack, "buttons_ack oid=%c count=%c");
 
-void
+/*void
 buttons_task(void)
 {
     if (!sched_check_wake(&buttons_wake))
@@ -159,5 +159,5 @@ buttons_task(void)
         sendf("buttons_state oid=%c ack_count=%c state=%*s"
               , oid, b->ack_count, report_count, b->reports);
     }
-}
-DECL_TASK(buttons_task);
+}*/
+//DECL_TASK(buttons_task);

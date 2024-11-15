@@ -22,31 +22,7 @@ extern uint32_t _stack_end;
  * Basic interrupt handlers
  ****************************************************************/
 
-// Inlined version of memset (to avoid function calls during intial boot code)
-static void __always_inline
-boot_memset(void *s, int c, size_t n)
-{
-    volatile uint32_t *p = s;
-    while (n) {
-        *p++ = c;
-        n -= sizeof(*p);
-    }
-}
-
-// Inlined version of memcpy (to avoid function calls during intial boot code)
-static void __always_inline
-boot_memcpy(void *dest, const void *src, size_t n)
-{
-    const uint32_t *s = src;
-    volatile uint32_t *d = dest;
-    while (n) {
-        *d++ = *s++;
-        n -= sizeof(*d);
-    }
-}
-
-// Main initialization code (called from ResetHandler below)
-static void __noreturn __section(".text.armcm_boot.stage_two")
+static void __noreturn
 reset_handler_stage_two(void)
 {
     int i;
@@ -59,13 +35,8 @@ reset_handler_stage_two(void)
     }
 
     // Reset all user interrupt priorities
-#if __CORTEX_M == 33
-    for (i = 0; i < ARRAY_SIZE(NVIC->IPR); i++)
-        NVIC->IPR[i] = 0;
-#else
     for (i = 0; i < ARRAY_SIZE(NVIC->IP); i++)
         NVIC->IP[i] = 0;
-#endif
 
     // Disable SysTick interrupt
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk;
@@ -75,7 +46,7 @@ reset_handler_stage_two(void)
     SCB->ICSR = SCB_ICSR_PENDSVCLR_Msk | SCB_ICSR_PENDSTCLR_Msk;
 
     // Reset all system interrupt priorities
-#if __CORTEX_M == 7 || __CORTEX_M == 33
+#if __CORTEX_M >= 7
     for (i = 0; i < ARRAY_SIZE(SCB->SHPR); i++)
         SCB->SHPR[i] = 0;
 #else
@@ -89,10 +60,10 @@ reset_handler_stage_two(void)
 
     // Copy global variables from flash to ram
     uint32_t count = (&_data_end - &_data_start) * 4;
-    boot_memcpy(&_data_start, &_data_flash, count);
+    __builtin_memcpy(&_data_start, &_data_flash, count);
 
     // Clear the bss segment
-    boot_memset(&_bss_start, 0, (&_bss_end - &_bss_start) * 4);
+    __builtin_memset(&_bss_start, 0, (&_bss_end - &_bss_start) * 4);
 
     barrier();
 
@@ -109,7 +80,7 @@ reset_handler_stage_two(void)
 
 // Initial code entry point - invoked by the processor after a reset
 // Reset interrupts and stack to take control from bootloaders
-void __section(".text.armcm_boot.stage_one")
+void
 ResetHandler(void)
 {
     __disable_irq();

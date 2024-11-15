@@ -13,7 +13,7 @@
 #include "hardware/structs/iobank0.h" // iobank0_hw
 #include "hardware/regs/resets.h" // RESETS_RESET_PWM_BITS
 
-#define MAX_PWM 255
+#define MAX_PWM 5
 DECL_CONSTANT("PWM_MAX", MAX_PWM);
 
 struct gpio_pwm
@@ -83,7 +83,6 @@ gpio_pwm_setup(uint8_t pin, uint32_t cycle_time, uint8_t val) {
         if (alias_func == IO_BANK0_GPIO0_CTRL_FUNCSEL_VALUE_PWM_A_0)
             shutdown("Aliasing PWM pin already has PWM enabled");
     }
-
     struct gpio_pwm out;
     out.reg = (void*)&slice->cc;
     out.shift = channel ? PWM_CH0_CC_B_LSB : PWM_CH0_CC_A_LSB;

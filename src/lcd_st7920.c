@@ -128,9 +128,9 @@ command_config_st7920(uint32_t *args)
     if (cmd_delay_ticks > diff)
         s->cmd_wait_ticks = cmd_delay_ticks - diff;
 }
-DECL_COMMAND(command_config_st7920,
-             "config_st7920 oid=%c cs_pin=%u sclk_pin=%u sid_pin=%u"
-             " sync_delay_ticks=%u cmd_delay_ticks=%u");
+//DECL_COMMAND(command_config_st7920,
+//             "config_st7920 oid=%c cs_pin=%u sclk_pin=%u sid_pin=%u"
+//             " sync_delay_ticks=%u cmd_delay_ticks=%u");
 
 void
 command_st7920_send_cmds(uint32_t *args)
@@ -140,7 +140,7 @@ command_st7920_send_cmds(uint32_t *args)
     uint8_t len = args[1], *cmds = command_decode_ptr(args[2]);
     st7920_xmit(s, len, cmds);
 }
-DECL_COMMAND(command_st7920_send_cmds, "st7920_send_cmds oid=%c cmds=%*s");
+//DECL_COMMAND(command_st7920_send_cmds, "st7920_send_cmds oid=%c cmds=%*s");
 
 void
 command_st7920_send_data(uint32_t *args)
@@ -150,7 +150,7 @@ command_st7920_send_data(uint32_t *args)
     uint8_t len = args[1], *data = command_decode_ptr(args[2]);
     st7920_xmit(s, len, data);
 }
-DECL_COMMAND(command_st7920_send_data, "st7920_send_data oid=%c data=%*s");
+//DECL_COMMAND(command_st7920_send_data, "st7920_send_data oid=%c data=%*s");
 
 void
 st7920_shutdown(void)

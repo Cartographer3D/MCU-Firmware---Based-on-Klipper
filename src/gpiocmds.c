@@ -124,9 +124,9 @@ command_config_digital_out(uint32_t *args)
     d->max_duration = args[4];
     move_queue_setup(&d->mq, sizeof(struct digital_move));
 }
-DECL_COMMAND(command_config_digital_out,
-             "config_digital_out oid=%c pin=%u value=%c"
-             " default_value=%c max_duration=%u");
+//DECL_COMMAND(command_config_digital_out,
+//             "config_digital_out oid=%c pin=%u value=%c"
+//             " default_value=%c max_duration=%u");
 
 void
 command_set_digital_out_pwm_cycle(uint32_t *args)
@@ -138,8 +138,8 @@ command_set_digital_out_pwm_cycle(uint32_t *args)
     d->cycle_time = args[1];
     irq_enable();
 }
-DECL_COMMAND(command_set_digital_out_pwm_cycle,
-             "set_digital_out_pwm_cycle oid=%c cycle_ticks=%u");
+//DECL_COMMAND(command_set_digital_out_pwm_cycle,
+//             "set_digital_out_pwm_cycle oid=%c cycle_ticks=%u");
 
 void
 command_queue_digital_out(uint32_t *args)
@@ -171,8 +171,8 @@ command_queue_digital_out(uint32_t *args)
     }
     irq_enable();
 }
-DECL_COMMAND(command_queue_digital_out,
-             "queue_digital_out oid=%c clock=%u on_ticks=%u");
+//DECL_COMMAND(command_queue_digital_out,
+//            "queue_digital_out oid=%c clock=%u on_ticks=%u");
 
 void
 command_update_digital_out(uint32_t *args)
@@ -192,7 +192,7 @@ command_update_digital_out(uint32_t *args)
         d->flags = (flags & DF_DEFAULT_ON) | on_flag;
     }
 }
-DECL_COMMAND(command_update_digital_out, "update_digital_out oid=%c value=%c");
+//DECL_COMMAND(command_update_digital_out, "update_digital_out oid=%c value=%c");
 
 void
 digital_out_shutdown(void)
@@ -212,4 +212,4 @@ command_set_digital_out(uint32_t *args)
 {
     gpio_out_setup(args[0], args[1]);
 }
-DECL_COMMAND(command_set_digital_out, "set_digital_out pin=%u value=%c");
+//DECL_COMMAND(command_set_digital_out, "set_digital_out pin=%u value=%c");

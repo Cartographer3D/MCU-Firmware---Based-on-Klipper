@@ -12,8 +12,8 @@
 #include "sched.h" // sched_shutdown
 
 DECL_ENUMERATION_RANGE("pin", "PA0", GPIO('A', 0), 16);
-DECL_ENUMERATION_RANGE("pin", "PB0", GPIO('B', 0), 16);
-DECL_ENUMERATION_RANGE("pin", "PC0", GPIO('C', 0), 16);
+//DECL_ENUMERATION_RANGE("pin", "PB0", GPIO('B', 0), 16);
+//DECL_ENUMERATION_RANGE("pin", "PC0", GPIO('C', 0), 16);
 #ifdef GPIOD
 DECL_ENUMERATION_RANGE("pin", "PD0", GPIO('D', 0), 16);
 #endif

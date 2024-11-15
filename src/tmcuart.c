@@ -12,7 +12,7 @@
 #include "command.h" // DECL_COMMAND
 #include "sched.h" // DECL_SHUTDOWN
 
-struct tmcuart_s {
+/*struct tmcuart_s {
     struct timer timer;
     struct gpio_out tx_pin;
     struct gpio_in rx_pin;
@@ -182,9 +182,9 @@ command_config_tmcuart(uint32_t *args)
     t->flags = (TU_LINE_HIGH | (pull_up ? TU_PULLUP : 0)
                 | (rx_pin == tx_pin ? TU_SINGLE_WIRE : 0));
 }
-DECL_COMMAND(command_config_tmcuart,
-             "config_tmcuart oid=%c rx_pin=%u pull_up=%c"
-             " tx_pin=%u bit_time=%u");
+//DECL_COMMAND(command_config_tmcuart,
+//             "config_tmcuart oid=%c rx_pin=%u pull_up=%c"
+//             " tx_pin=%u bit_time=%u");
 
 // Parse and schedule a TMC UART transmission request
 void
@@ -215,7 +215,7 @@ command_tmcuart_send(uint32_t *args)
     sched_add_timer(&t->timer);
     irq_enable();
 }
-DECL_COMMAND(command_tmcuart_send, "tmcuart_send oid=%c write=%*s read=%c");
+//DECL_COMMAND(command_tmcuart_send, "tmcuart_send oid=%c write=%*s read=%c");
 
 // Report completed response message back to host
 void
@@ -234,10 +234,10 @@ tmcuart_task(void)
         sendf("tmcuart_response oid=%c read=%*s"
               , oid, t->read_count / 8, t->data);
     }
-}
-DECL_TASK(tmcuart_task);
+}*/
+//DECL_TASK(tmcuart_task);
 
-void
+/*void
 tmcuart_shutdown(void)
 {
     uint8_t i;
@@ -246,4 +246,4 @@ tmcuart_shutdown(void)
         tmcuart_reset_line(t);
     }
 }
-DECL_SHUTDOWN(tmcuart_shutdown);
+DECL_SHUTDOWN(tmcuart_shutdown);*/

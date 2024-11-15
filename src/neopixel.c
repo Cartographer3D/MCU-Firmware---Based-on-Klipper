@@ -31,12 +31,12 @@
 
 typedef unsigned int neopixel_time_t;
 
-static neopixel_time_t
+/*static neopixel_time_t
 nsecs_to_ticks(uint32_t ns)
 {
     return timer_from_us(ns * 1000) / 1000000;
 }
-
+*/
 static inline int
 neopixel_check_elapsed(neopixel_time_t t1, neopixel_time_t t2
                        , neopixel_time_t ticks)
@@ -105,10 +105,10 @@ command_config_neopixel(uint32_t *args)
     n->bit_max_ticks = args[3];
     n->reset_min_ticks = args[4];
 }
-DECL_COMMAND(command_config_neopixel, "config_neopixel oid=%c pin=%u"
-             " data_size=%hu bit_max_ticks=%u reset_min_ticks=%u");
+//DECL_COMMAND(command_config_neopixel, "config_neopixel oid=%c pin=%u"
+//             " data_size=%hu bit_max_ticks=%u reset_min_ticks=%u");
 
-static int
+/*static int
 send_data(struct neopixel_s *n)
 {
     // Make sure the reset time has elapsed since last request
@@ -172,9 +172,9 @@ fail:
     gpio_out_write(pin, 0);
     n->last_req_time = timer_read_time();
     return -1;
-}
+}*/
 
-void
+/*void
 command_neopixel_update(uint32_t *args)
 {
     uint8_t oid = args[0];
@@ -187,8 +187,8 @@ command_neopixel_update(uint32_t *args)
     memcpy(&n->data[pos], data, data_len);
 }
 DECL_COMMAND(command_neopixel_update,
-             "neopixel_update oid=%c pos=%hu data=%*s");
-
+             "neopixel_update oid=%c pos=%hu data=%*s");*/
+/*
 void
 command_neopixel_send(uint32_t *args)
 {
@@ -196,5 +196,5 @@ command_neopixel_send(uint32_t *args)
     struct neopixel_s *n = oid_lookup(oid, command_config_neopixel);
     int ret = send_data(n);
     sendf("neopixel_result oid=%c success=%c", oid, ret ? 0 : 1);
-}
-DECL_COMMAND(command_neopixel_send, "neopixel_send oid=%c");
+}*/
+//DECL_COMMAND(command_neopixel_send, "neopixel_send oid=%c");

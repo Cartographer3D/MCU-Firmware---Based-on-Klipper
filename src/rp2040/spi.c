@@ -11,21 +11,21 @@
 #include "hardware/structs/spi.h" // spi_hw_t
 #include "hardware/regs/resets.h" // RESETS_RESET_SPI*_BITS
 
-DECL_ENUMERATION("spi_bus", "spi0a", 0);
-DECL_CONSTANT_STR("BUS_PINS_spi0a", "gpio0,gpio3,gpio2");
-DECL_ENUMERATION("spi_bus", "spi0b", 1);
-DECL_CONSTANT_STR("BUS_PINS_spi0b", "gpio4,gpio7,gpio6");
-DECL_ENUMERATION("spi_bus", "spi0c", 2);
-DECL_CONSTANT_STR("BUS_PINS_spi0c", "gpio16,gpio19,gpio18");
-DECL_ENUMERATION("spi_bus", "spi0d", 3);
-DECL_CONSTANT_STR("BUS_PINS_spi0d", "gpio20,gpio23,gpio22");
+//DECL_ENUMERATION("spi_bus", "spi0a", 0);
+//DECL_CONSTANT_STR("BUS_PINS_spi0a", "gpio0,gpio3,gpio2");
+//DECL_ENUMERATION("spi_bus", "spi0b", 1);
+//DECL_CONSTANT_STR("BUS_PINS_spi0b", "gpio4,gpio7,gpio6");
+//DECL_ENUMERATION("spi_bus", "spi0c", 2);
+//DECL_CONSTANT_STR("BUS_PINS_spi0c", "gpio16,gpio19,gpio18");
+//DECL_ENUMERATION("spi_bus", "spi0d", 3);
+//DECL_CONSTANT_STR("BUS_PINS_spi0d", "gpio20,gpio23,gpio22");
 
-DECL_ENUMERATION("spi_bus", "spi1a", 4);
-DECL_CONSTANT_STR("BUS_PINS_spi1a", "gpio8,gpio11,gpio10");
-DECL_ENUMERATION("spi_bus", "spi1b", 5);
-DECL_CONSTANT_STR("BUS_PINS_spi1b", "gpio12,gpio15,gpio14");
-DECL_ENUMERATION("spi_bus", "spi1c", 6);
-DECL_CONSTANT_STR("BUS_PINS_spi1c", "gpio24,gpio27,gpio26");
+//DECL_ENUMERATION("spi_bus", "spi1a", 4);
+//DECL_CONSTANT_STR("BUS_PINS_spi1a", "gpio8,gpio11,gpio10");
+//DECL_ENUMERATION("spi_bus", "spi1b", 5);
+//DECL_CONSTANT_STR("BUS_PINS_spi1b", "gpio12,gpio15,gpio14");
+//DECL_ENUMERATION("spi_bus", "spi1c", 6);
+//DECL_CONSTANT_STR("BUS_PINS_spi1c", "gpio24,gpio27,gpio26");
 
 struct spi_info {
     spi_hw_t *spi;
@@ -89,12 +89,8 @@ void
 spi_prepare(struct spi_config config)
 {
     spi_hw_t *spi = config.spi;
-    if (spi->cr0 == config.cr0 && spi->cpsr == config.cpsr)
-        return;
-    spi->cr1 = 0;
     spi->cr0 = config.cr0;
     spi->cpsr = config.cpsr;
-    spi->cr1 = SPI_SSPCR1_SSE_BITS;
 }
 
 void

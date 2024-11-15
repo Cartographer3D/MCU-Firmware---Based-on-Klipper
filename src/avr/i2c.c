@@ -11,7 +11,6 @@
 #include "gpio.h" // i2c_setup
 #include "internal.h" // GPIO
 #include "sched.h" // sched_shutdown
-#include "i2ccmds.h" // I2C_BUS_SUCCESS
 
 DECL_ENUMERATION("i2c_bus", "twi", 0);
 
@@ -95,7 +94,7 @@ i2c_stop(uint32_t timeout)
     TWCR = (1<<TWEN) | (1<<TWINT) | (1<<TWSTO);
 }
 
-int
+void
 i2c_write(struct i2c_config config, uint8_t write_len, uint8_t *write)
 {
     uint32_t timeout = timer_read_time() + timer_from_us(5000);
@@ -105,11 +104,9 @@ i2c_write(struct i2c_config config, uint8_t write_len, uint8_t *write)
     while (write_len--)
         i2c_send_byte(*write++, timeout);
     i2c_stop(timeout);
-
-    return I2C_BUS_SUCCESS;
 }
 
-int
+void
 i2c_read(struct i2c_config config, uint8_t reg_len, uint8_t *reg
          , uint8_t read_len, uint8_t *read)
 {
@@ -123,6 +120,4 @@ i2c_read(struct i2c_config config, uint8_t reg_len, uint8_t *reg
     while (read_len--)
         i2c_receive_byte(read++, timeout, read_len);
     i2c_stop(timeout);
-
-    return I2C_BUS_SUCCESS;
 }

@@ -11,19 +11,18 @@
 #include "internal.h" // GPIO
 #include "sched.h" // sched_shutdown
 #include "board/irq.h" //irq_disable
-#include "i2ccmds.h"   // I2C_BUS_SUCCESS
 
 struct i2c_info {
     I2C_TypeDef *i2c;
     uint8_t scl_pin, sda_pin;
 };
 
-DECL_ENUMERATION("i2c_bus", "i2c1", 0);
-DECL_CONSTANT_STR("BUS_PINS_i2c1", "PB6,PB7");
-DECL_ENUMERATION("i2c_bus", "i2c1a", 1);
-DECL_CONSTANT_STR("BUS_PINS_i2c1a", "PB8,PB9");
-DECL_ENUMERATION("i2c_bus", "i2c2", 2);
-DECL_CONSTANT_STR("BUS_PINS_i2c2", "PB10,PB11");
+//DECL_ENUMERATION("i2c_bus", "i2c1", 0);
+//DECL_CONSTANT_STR("BUS_PINS_i2c1", "PB6,PB7");
+//DECL_ENUMERATION("i2c_bus", "i2c1a", 1);
+//DECL_CONSTANT_STR("BUS_PINS_i2c1a", "PB8,PB9");
+//DECL_ENUMERATION("i2c_bus", "i2c2", 2);
+//DECL_CONSTANT_STR("BUS_PINS_i2c2", "PB10,PB11");
 #if CONFIG_MACH_STM32F2 || CONFIG_MACH_STM32F4
 DECL_ENUMERATION("i2c_bus", "i2c3", 3);
 DECL_CONSTANT_STR("BUS_PINS_i2c3", "PA8,PC9");
@@ -98,8 +97,6 @@ i2c_wait(I2C_TypeDef *i2c, uint32_t set, uint32_t clear, uint32_t timeout)
         uint32_t sr1 = i2c->SR1;
         if ((sr1 & set) == set && (sr1 & clear) == 0)
             return sr1;
-        if (sr1 & I2C_SR1_AF)
-            shutdown("I2C NACK error encountered");
         if (!timer_is_before(timer_read_time(), timeout))
             shutdown("i2c timeout");
     }
@@ -150,7 +147,7 @@ i2c_stop(I2C_TypeDef *i2c, uint32_t timeout)
     i2c_wait(i2c, 0, I2C_SR1_TXE, timeout);
 }
 
-int
+void
 i2c_write(struct i2c_config config, uint8_t write_len, uint8_t *write)
 {
     I2C_TypeDef *i2c = config.i2c;
@@ -160,11 +157,9 @@ i2c_write(struct i2c_config config, uint8_t write_len, uint8_t *write)
     while (write_len--)
         i2c_send_byte(i2c, *write++, timeout);
     i2c_stop(i2c, timeout);
-
-    return I2C_BUS_SUCCESS;
 }
 
-int
+void
 i2c_read(struct i2c_config config, uint8_t reg_len, uint8_t *reg
          , uint8_t read_len, uint8_t *read)
 {
@@ -185,6 +180,4 @@ i2c_read(struct i2c_config config, uint8_t reg_len, uint8_t *reg
         read++;
     }
     i2c_wait(i2c, 0, I2C_SR1_RXNE, timeout);
-
-    return I2C_BUS_SUCCESS;
 }

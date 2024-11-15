@@ -58,8 +58,8 @@ command_config_counter(uint32_t *args)
     c->pin = gpio_in_setup(args[1], args[2]);
     c->timer.func = counter_event;
 }
-DECL_COMMAND(command_config_counter,
-             "config_counter oid=%c pin=%u pull_up=%c");
+//DECL_COMMAND(command_config_counter,
+//             "config_counter oid=%c pin=%u pull_up=%c");
 
 void
 command_query_counter(uint32_t *args)
@@ -72,9 +72,9 @@ command_query_counter(uint32_t *args)
     c->next_sample_time = c->timer.waketime; // sample immediately
     sched_add_timer(&c->timer);
 }
-DECL_COMMAND(command_query_counter,
-             "query_counter oid=%c clock=%u poll_ticks=%u sample_ticks=%u");
-
+//DECL_COMMAND(command_query_counter,
+//             "query_counter oid=%c clock=%u poll_ticks=%u sample_ticks=%u");
+/*
 void
 counter_task(void)
 {
@@ -95,5 +95,5 @@ counter_task(void)
         sendf("counter_state oid=%c next_clock=%u count=%u count_clock=%u",
               oid, waketime, count, count_time);
     }
-}
-DECL_TASK(counter_task);
+}*/
+//DECL_TASK(counter_task);

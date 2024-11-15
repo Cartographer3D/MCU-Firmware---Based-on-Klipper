@@ -60,8 +60,8 @@ command_config_thermocouple(uint32_t *args)
     spi->spi = spidev_oid_lookup(args[1]);
     spi->chip_type = chip_type;
 }
-DECL_COMMAND(command_config_thermocouple,
-             "config_thermocouple oid=%c spi_oid=%c thermocouple_type=%c");
+//DECL_COMMAND(command_config_thermocouple,
+//             "config_thermocouple oid=%c spi_oid=%c thermocouple_type=%c");
 
 void
 command_query_thermocouple(uint32_t *args)
@@ -80,27 +80,27 @@ command_query_thermocouple(uint32_t *args)
     spi->invalid_count = 0;
     sched_add_timer(&spi->timer);
 }
-DECL_COMMAND(command_query_thermocouple,
-             "query_thermocouple oid=%c clock=%u rest_ticks=%u"
-             " min_value=%u max_value=%u max_invalid_count=%c");
+//DECL_COMMAND(command_query_thermocouple,
+//             "query_thermocouple oid=%c clock=%u rest_ticks=%u"
+//             " min_value=%u max_value=%u max_invalid_count=%c");
 
-static void
-thermocouple_respond(struct thermocouple_spi *spi, uint32_t next_begin_time
-                     , uint32_t value, uint8_t fault, uint8_t oid)
-{
-    sendf("thermocouple_result oid=%c next_clock=%u value=%u fault=%c",
-          oid, next_begin_time, value, fault);
+//static void
+//thermocouple_respond(struct thermocouple_spi *spi, uint32_t next_begin_time
+//                     , uint32_t value, uint8_t fault, uint8_t oid)
+//{
+    //sendf("thermocouple_result oid=%c next_clock=%u value=%u fault=%c",
+//          oid, next_begin_time, value, fault);
     /* check the result and stop if below or above allowed range */
-    if (fault || value < spi->min_value || value > spi->max_value) {
-        spi->invalid_count++;
-        if (spi->invalid_count < spi->max_invalid)
-            return;
-        try_shutdown("Thermocouple reader fault");
-    }
-    spi->invalid_count = 0;
-}
+//    if (fault || value < spi->min_value || value > spi->max_value) {
+//        spi->invalid_count++;
+//        if (spi->invalid_count < spi->max_invalid)
+//            return;
+//        try_shutdown("Thermocouple reader fault");
+//    }
+//    spi->invalid_count = 0;
+//}
 
-static void
+/*static void
 thermocouple_handle_max31855(struct thermocouple_spi *spi
                              , uint32_t next_begin_time, uint8_t oid)
 {
@@ -110,12 +110,12 @@ thermocouple_handle_max31855(struct thermocouple_spi *spi
     memcpy(&value, msg, sizeof(value));
     value = be32_to_cpu(value);
     thermocouple_respond(spi, next_begin_time, value, value & 0x07, oid);
-}
+}*/
 
 #define MAX31856_LTCBH_REG 0x0C
 #define MAX31856_SR_REG 0x0F
 
-static void
+/*static void
 thermocouple_handle_max31856(struct thermocouple_spi *spi
                              , uint32_t next_begin_time, uint8_t oid)
 {
@@ -129,11 +129,11 @@ thermocouple_handle_max31856(struct thermocouple_spi *spi
     msg[1] = 0x00;
     spidev_transfer(spi->spi, 1, 2, msg);
     thermocouple_respond(spi, next_begin_time, value, msg[1], oid);
-}
+}*/
 
 #define MAX31865_RTDMSB_REG 0x01
 #define MAX31865_FAULTSTAT_REG 0x07
-
+/*
 static void
 thermocouple_handle_max31865(struct thermocouple_spi *spi
                              , uint32_t next_begin_time, uint8_t oid)
@@ -149,8 +149,8 @@ thermocouple_handle_max31865(struct thermocouple_spi *spi
     spidev_transfer(spi->spi, 1, 2, msg);
     uint8_t fault = (msg[1] & ~0x03) | (value & 0x0001);
     thermocouple_respond(spi, next_begin_time, value, fault, oid);
-}
-
+}*/
+/*
 static void
 thermocouple_handle_max6675(struct thermocouple_spi *spi
                             , uint32_t next_begin_time, uint8_t oid)
@@ -162,9 +162,9 @@ thermocouple_handle_max6675(struct thermocouple_spi *spi
     value = be16_to_cpu(value);
     thermocouple_respond(spi, next_begin_time, value, value & 0x06, oid);
 }
-
+*/
 // task to read thermocouple and send response
-void
+/*void
 thermocouple_task(void)
 {
     if (!sched_check_wake(&thermocouple_wake))
@@ -193,5 +193,5 @@ thermocouple_task(void)
             break;
         }
     }
-}
-DECL_TASK(thermocouple_task);
+}*/
+//DECL_TASK(thermocouple_task);

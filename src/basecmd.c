@@ -343,13 +343,13 @@ command_emergency_stop(uint32_t *args)
 }
 DECL_COMMAND_FLAGS(command_emergency_stop, HF_IN_SHUTDOWN, "emergency_stop");
 
-void
+/*void
 command_clear_shutdown(uint32_t *args)
 {
     sched_clear_shutdown();
 }
 DECL_COMMAND_FLAGS(command_clear_shutdown, HF_IN_SHUTDOWN, "clear_shutdown");
-
+*/
 void
 command_identify(uint32_t *args)
 {

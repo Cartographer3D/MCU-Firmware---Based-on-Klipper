@@ -11,7 +11,7 @@ config AVR_SELECT
     select HAVE_GPIO_I2C
     select HAVE_GPIO_HARD_PWM
     select HAVE_STRICT_TIMING
-    select HAVE_LIMITED_CODE_SIZE if MACH_atmega168 || MACH_atmega328 || MACH_atmega328p || MACH_atmega32u4
+    select HAVE_LIMITED_CODE_SIZE if MACH_atmega168
 
 config BOARD_DIRECTORY
     string
@@ -147,6 +147,6 @@ config SIMULAVR
          instead of for real hardware. This disables support for "U2X
          baud" mode which is not supported on simulavr.
 
-         If unsure, select "N".
+         If unsure, select "N".     
 
 endif
