@@ -17,6 +17,7 @@ struct i2cdev_s *cartographer_i2c;
 //struct i2c_software *bc_is;
 uint8_t cartographer_status=0;//激活指标
 static struct task_wake cartographer_update;
+static struct task_wake cartographer_delay;
 uint8_t cartographer_home_flag=0;//归零flag
 uint8_t trigger_method=0;
 uint32_t cartographer_hometime;
@@ -31,6 +32,7 @@ struct gpio_adc temp_in;
 struct gpio_out led;
 struct gpio_out power;
 struct timer cartographer_update_timer;
+struct timer delay_timer;
 //struct gpio_in complete;
 uint16_t
 readRegister(uint8_t reg) 
@@ -39,7 +41,10 @@ readRegister(uint8_t reg)
 
     // Read 2 bytes of data from LDC1612 channel 0
     //i2c_software_read(bc_i2c->i2c_software, 1, &reg, 2, data);
-    i2c_dev_read(cartographer_i2c, 1, &reg, 2, data);
+    int ret = i2c_dev_read(cartographer_i2c, 1, &reg, 2, data);
+    
+    i2c_shutdown_on_err(ret);
+
     // Convert the read data to a 16-bit value
     uint16_t value = (data[0] << 8) | data[1];
 
@@ -109,6 +114,17 @@ cartographer_task_wakeup(struct timer *timer)
     timer->waketime=timer->waketime+20000000;
         return SF_RESCHEDULE;
 }
+static uint_fast8_t
+cartographer_delay_wakeup(struct timer *timer)
+{
+    sched_wake_task(&cartographer_delay);
+    #if CONFIG_FOR_K1
+      timer->waketime=timer->waketime+timer_from_us(4000);
+    #else
+      timer->waketime=timer->waketime+timer_from_us(2000);
+    #endif
+        return SF_RESCHEDULE;
+}
 void
 cartographer_init(void)
 {
@@ -130,12 +146,16 @@ cartographer_init(void)
     temp_in=gpio_adc_setup(GPIO('A', 4));
     //irq_disable();
     cartographer_i2c= cartographer_mem_alloc(sizeof(*cartographer_i2c));
-    cartographer_i2c->i2c_hw = i2c_setup(0, 400000,(0x2A & 0x7f));
+    cartographer_i2c->i2c_hw = i2c_setup(0, 200000,(0x2A & 0x7f));
     cartographer_i2c->flags |= 2;
+    writeRegister(0x1C,0x8000);
     configuration();
     cartographer_update_timer.waketime=timer_read_time()+100000;
+    delay_timer.waketime=timer_read_time()+100000;
     cartographer_update_timer.func=cartographer_task_wakeup;
+    delay_timer.func=cartographer_delay_wakeup;
     sched_add_timer(&cartographer_update_timer);
+    sched_add_timer(&delay_timer);
     //irq_enable();
 }
 DECL_INIT(cartographer_init);
@@ -297,7 +317,12 @@ DECL_COMMAND(command_cartographer_base_read,"cartographer_base_read len=%c offse
 void
 cartographer_update_task(void)
 {
-    if((!cartographer_status)&&(!sched_check_wake(&cartographer_update)))
+    if(!cartographer_status)
+    {
+        if(!sched_check_wake(&cartographer_update))
+            return;
+    }
+    else if(!sched_check_wake(&cartographer_delay))
         return;
     uint32_t data,clock;
     //if(gpio_in_read(complete))
@@ -315,9 +340,6 @@ cartographer_update_task(void)
             j++;
         }
     sendf("cartographer_data clock=%u data=%u temp=%u", clock, data, temp);
-    #if CONFIG_FOR_K1
-      idm_sleep(500);
-    #endif
     if(data>trigger_freq)
     {
 	gpio_out_write(led,1);	
