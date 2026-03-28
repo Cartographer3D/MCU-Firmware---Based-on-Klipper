@@ -83,6 +83,7 @@ gpio_pwm_setup(uint8_t pin, uint32_t cycle_time, uint8_t val) {
         if (alias_func == IO_BANK0_GPIO0_CTRL_FUNCSEL_VALUE_PWM_A_0)
             shutdown("Aliasing PWM pin already has PWM enabled");
     }
+
     struct gpio_pwm out;
     out.reg = (void*)&slice->cc;
     out.shift = channel ? PWM_CH0_CC_B_LSB : PWM_CH0_CC_A_LSB;

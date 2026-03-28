@@ -33,7 +33,8 @@ class GenDerivative:
         elif '(mm/s)' in units:
             rep = [('Velocity', 'Acceleration'), ('(mm/s)', '(mm/s^2)')]
         else:
-            return {'label': 'Derivative', 'units': 'Unknown'}
+            return {'label': 'Derivative of %s' % (label['label']),
+                    'units': 'Unknown'}
         for old, new in rep:
             lname = lname.replace(old, new).replace(old.lower(), new.lower())
             units = units.replace(old, new).replace(old.lower(), new.lower())
@@ -104,6 +105,168 @@ class GenIntegral:
             data[i] = total
         return data
 AHandlers["integral"] = GenIntegral
+
+# Calculate a pointwise 2-norm of several datasets (e.g. compute velocity or
+# accel from its x, y,... components)
+class GenNorm2:
+    ParametersMin = 2
+    ParametersMax = 3
+    DataSets = [
+        ('norm2(<dataset1>,<dataset2>)',
+         'pointwise 2-norm of dataset1 and dataset2'),
+        ('norm2(<dataset1>,<dataset2>,<dataset3>)',
+         'pointwise 2-norm of 3 datasets'),
+    ]
+    def __init__(self, amanager, name_parts):
+        self.amanager = amanager
+        self.datasets = []
+        self.datasets.append(name_parts[1])
+        self.datasets.append(name_parts[2])
+        if len(name_parts) == 4:
+            self.datasets.append(name_parts[3])
+        for dataset in self.datasets:
+            amanager.setup_dataset(dataset)
+    def get_label(self):
+        label = self.amanager.get_label(self.datasets[0])
+        units = label['units']
+        datas = ['position', 'velocity', 'acceleration']
+        data_name = ''
+        for d in datas:
+            if d in label['label']:
+                data_name = d
+                break
+        lname = ''
+        for d in self.datasets:
+            l = self.amanager.get_label(d)['label']
+            for r in datas:
+                l = l.replace(r, '').strip()
+            if lname:
+                lname += '+'
+            lname += l
+        lname += ' ' + data_name + ' norm2'
+        return {'label': lname, 'units': units}
+    def generate_data(self):
+        seg_time = self.amanager.get_segment_time()
+        data = []
+        for dataset in self.datasets:
+            data.append(self.amanager.get_datasets()[dataset])
+        res = [0.] * len(data[0])
+        for i in range(len(data[0])):
+            norm2 = 0.
+            for dataset in data:
+                norm2 += dataset[i] * dataset[i]
+            res[i] = math.sqrt(norm2)
+        return res
+AHandlers["norm2"] = GenNorm2
+
+class GenSmoothed:
+    ParametersMin = 1
+    ParametersMax = 2
+    DataSets = [
+        ('smooth(<dataset>)', 'Generate moving weighted average of a dataset'),
+        ('smooth(<dataset>,<smooth_time>)',
+         'Generate moving weighted average of a dataset with a given'
+         ' smoothing time that defines the window size'),
+    ]
+    def __init__(self, amanager, name_parts):
+        self.amanager = amanager
+        self.source = name_parts[1]
+        amanager.setup_dataset(self.source)
+        self.smooth_time = 0.01
+        if len(name_parts) > 2:
+            self.smooth_time = float(name_parts[2])
+    def get_label(self):
+        label = self.amanager.get_label(self.source)
+        return {'label': 'Smoothed ' + label['label'], 'units': label['units']}
+    def generate_data(self):
+        seg_time = self.amanager.get_segment_time()
+        src = self.amanager.get_datasets()[self.source]
+        n = len(src)
+        data = [0.] * n
+        hst = 0.5 * self.smooth_time
+        seg_half_len = round(hst / seg_time)
+        inv_norm = 1. / sum([min(k + 1, seg_half_len + seg_half_len - k)
+                             for k in range(2 * seg_half_len)])
+        for i in range(n):
+            j = max(0, i - seg_half_len)
+            je = min(n, i + seg_half_len)
+            avg_val = 0.
+            for k, v in enumerate(src[j:je]):
+                avg_val += v * min(k + 1, seg_half_len + seg_half_len - k)
+            data[i] = avg_val * inv_norm
+        return data
+AHandlers["smooth"] = GenSmoothed
+
+class GenSOSFilter:
+    ParametersMin = 5
+    ParametersMax = 6
+    DataSets = [
+        ('sos(<dataset>,{filt,filtfilt},highpass,<order>,<hz>)',
+         'SOS highpass filtered dataset'),
+        ('sos(<dataset>,{filt,filtfilt},lowpass,<order>,<hz>)',
+         'SOS lowpass filtered dataset'),
+        ('sos(<dataset>,{filt,filtfilt},bandpass,<order>,<lowhz>,<highhz>)',
+         'SOS lowpass filtered dataset'),
+        ('sos(<dataset>,{filt,filtfilt},notch,<hz>,<quality>)',
+         'SOS notch filtered dataset'),
+    ]
+    def __init__(self, amanager, name_parts):
+        self.amanager = amanager
+        self.source = name_parts[1]
+
+        from numpy import array
+        from scipy.signal import sosfiltfilt, sosfilt, sosfilt_zi
+        self.array = array
+        self.type = name_parts[2]
+        if self.type == "filt":
+            self.sosfilt = sosfilt
+            self.sosfilt_zi = sosfilt_zi
+        elif self.type == "filtfilt":
+            self.sosfilt = sosfiltfilt
+        else:
+            amanager.error("Unknown sos type '%s'" % (self.type,))
+
+        filter_type = name_parts[3]
+        amanager.setup_dataset(self.source)
+        inv_seg_time = 1.0 / amanager.get_segment_time()
+
+        if filter_type in ('highpass', 'lowpass', 'bandpass'):
+            from scipy.signal import butter
+            order = int(name_parts[4])
+            cutoff = float(name_parts[5])
+            desc = "%.fHz" % (cutoff)
+            if filter_type == 'bandpass':
+                cutoff = (cutoff, float(name_parts[6]))
+                desc = "%.1f..%.1fHz" % cutoff
+            self.sos = butter(order, cutoff, filter_type, output='sos',
+                              fs=inv_seg_time)
+            self.filter_desc = "%s %s order %d" % (filter_type, desc, order)
+        elif filter_type == 'notch':
+            from scipy.signal import iirnotch, tf2sos
+            freq = float(name_parts[4])
+            quality = float(name_parts[5])
+            b, a = iirnotch(freq, Q=quality, fs=inv_seg_time)
+            self.sos = tf2sos(b, a)
+            self.filter_desc = "notch %.1fHz Q: %.1f" % (freq, quality)
+        else:
+            raise amanager.error("Unknown filter type '%s'" % (filter_type,))
+
+    def get_label(self):
+        label = self.amanager.get_label(self.source)
+        lname = "SOS %s (%s)" % (self.filter_desc, label['label'])
+        return {'label': lname, 'units': label['units']}
+
+    def generate_data(self):
+        data = self.amanager.get_datasets()[self.source]
+        data_array = self.array(data)
+        if self.type == "filt":
+            zi = self.sosfilt_zi(self.sos) * data_array[0]
+            filtered, _ = self.sosfilt(self.sos, data_array, zi=zi)
+        else:
+            filtered = self.sosfilt(self.sos, data_array)
+        return filtered.tolist()
+
+AHandlers["sos"] = GenSOSFilter
 
 # Calculate a kinematic stepper position from the toolhead requested position
 class GenKinematicPosition:

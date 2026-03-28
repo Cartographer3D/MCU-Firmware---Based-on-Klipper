@@ -25,7 +25,7 @@
 #endif
 
 // gpio.c
-extern GPIO_TypeDef * const digital_regs[];
+GPIO_TypeDef *gpio_pin_to_regs(uint32_t pin);
 #define GPIO(PORT, NUM) (((PORT)-'A') * 16 + (NUM))
 #define GPIO2PORT(PIN) ((PIN) / 16)
 #define GPIO2BIT(PIN) (1<<((PIN) % 16))
@@ -54,6 +54,10 @@ uint32_t get_pclock_frequency(uint32_t periph_base);
 void gpio_clock_enable(GPIO_TypeDef *regs);
 
 // idm.c
-void turn_off_cartographer(void);
+#if CONFIG_IDM_ENABLE || CONFIG_CARTOGRAPHER_G431_ENABLE
+void turn_off_idm(void);
 
+#elif CONFIG_CARTOGRAPHER_ENABLE
+void turn_off_cartographer(void);
+#endif
 #endif // internal.h

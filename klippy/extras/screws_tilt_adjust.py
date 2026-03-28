@@ -9,10 +9,9 @@ from . import probe
 
 class ScrewsTiltAdjust:
     def __init__(self, config):
-        self.config = config
         self.printer = config.get_printer()
         self.screws = []
-        self.results = []
+        self.results = {}
         self.max_diff = None
         self.max_diff_error = False
         # Read config
@@ -28,12 +27,12 @@ class ScrewsTiltAdjust:
             raise config.error("screws_tilt_adjust: Must have "
                                "at least three screws")
         self.threads = {'CW-M3': 0, 'CCW-M3': 1, 'CW-M4': 2, 'CCW-M4': 3,
-                        'CW-M5': 4, 'CCW-M5': 5}
+                        'CW-M5': 4, 'CCW-M5': 5, 'CW-M6': 6, 'CCW-M6': 7}
         self.thread = config.getchoice('screw_thread', self.threads,
                                        default='CW-M3')
         # Initialize ProbePointsHelper
         points = [coord for coord, name in self.screws]
-        self.probe_helper = probe.ProbePointsHelper(self.config,
+        self.probe_helper = probe.ProbePointsHelper(config,
                                                     self.probe_finalize,
                                                     default_points=points)
         self.probe_helper.minimum_points(3)
@@ -61,13 +60,16 @@ class ScrewsTiltAdjust:
 
     def get_status(self, eventtime):
         return {'error': self.max_diff_error,
+            'max_deviation': self.max_diff,
             'results': self.results}
 
-    def probe_finalize(self, offsets, positions):
+    def probe_finalize(self, positions):
         self.results = {}
         self.max_diff_error = False
-        # Factors used for CW-M3, CCW-M3, CW-M4, CCW-M4, CW-M5 and CCW-M5
-        threads_factor = {0: 0.5, 1: 0.5, 2: 0.7, 3: 0.7, 4: 0.8, 5: 0.8}
+        # Factors used for CW-M3, CCW-M3, CW-M4, CCW-M4, CW-M5, CCW-M5, CW-M6
+        #and CCW-M6
+        threads_factor = {0: 0.5, 1: 0.5, 2: 0.7, 3: 0.7, 4: 0.8, 5: 0.8,
+        6: 1.0, 7: 1.0}
         is_clockwise_thread = (self.thread & 1) == 0
         screw_diff = []
         # Process the read Z values
@@ -77,15 +79,15 @@ class ScrewsTiltAdjust:
                     or (not is_clockwise_thread and self.direction == 'CCW'))
             min_or_max = max if use_max else min
             i_base, z_base = min_or_max(
-                enumerate([pos[2] for pos in positions]), key=lambda v: v[1])
+                enumerate([pos.bed_z for pos in positions]), key=lambda v: v[1])
         else:
             # First screw is the base position used for comparison
-            i_base, z_base = 0, positions[0][2]
+            i_base, z_base = 0, positions[0].bed_z
         # Provide the user some information on how to read the results
         self.gcode.respond_info("01:20 means 1 full turn and 20 minutes, "
                                 "CW=clockwise, CCW=counter-clockwise")
         for i, screw in enumerate(self.screws):
-            z = positions[i][2]
+            z = positions[i].bed_z
             coord, name = screw
             if i == i_base:
                 # Show the results

@@ -7,36 +7,44 @@
 #include "trsync.h" // trsync_do_trigger
 #include "internal.h" // GPIO
 #include "board/irq.h" // irq_disable
-#include "chipid.h"
+#include "gpio.h"
 
-DECL_CONSTANT("CARTOGRAPHER_ADC_SMOOTH_COUNT", 16);
-uint32_t trigger_freq=44803800,untrigger_freq=44534977;
-uint8_t cartographer_trigger_reason,cartographer_trigger_invert;
-struct trsync *cartographer_ts;
-struct i2cdev_s *cartographer_i2c;
-uint8_t upload_skip=0;
-uint8_t cartographer_status=0;//激活指标
-uint8_t cartographer_home_flag=0;//归零flag
-uint32_t cartographer_time=-1;
+DECL_CONSTANT("IDM_ADC_SMOOTH_COUNT", 16);
+uint32_t trigger_freq=67205700,untrigger_freq=66802466;
+uint8_t idm_trigger_reason,idm_trigger_invert;
+struct trsync *idm_ts;
+struct i2cdev_s *idm_i2c;
+uint8_t idm_status=0;//激活指标
+static struct task_wake idm_update;
+static struct task_wake idm_delay;
+uint8_t idm_home_flag=0;//归零flag
+uint8_t trigger_method=0;
+uint32_t idm_hometime;
+uint32_t homing_freq=0;
+int32_t stack[6]={0,0,0,0,0,0};
+int32_t max=0;
+uint8_t dur=20;
+uint8_t current=0;
+uint8_t start=0;
+uint32_t trigger_threshold=1000;
 struct gpio_adc temp_in;
 struct gpio_out led;
 struct gpio_out power;
-struct gpio_in complete;
-
+struct timer idm_update_timer;
+struct timer delay_timer;
 uint16_t
 readRegister(uint8_t reg) 
 {
     uint8_t data[2]; // Buffer to store the read data
 
     // Read 2 bytes of data from LDC1612 channel 0
-    i2c_read(cartographer_i2c->i2c_config, 1, &reg, 2, data);
+    i2c_dev_read(idm_i2c, 1, &reg, 2, data);
 
     // Convert the read data to a 16-bit value
     uint16_t value = (data[0] << 8) | data[1];
 
     return value;
 }
-
 uint32_t
 read_channel(void)
 {
@@ -50,7 +58,7 @@ read_channel(void)
 }
 
 void *
-cartographer_mem_alloc(uint16_t size)
+idm_mem_alloc(uint16_t size)
 {
     void *data = alloc_chunk(size);
     return data;
@@ -63,14 +71,16 @@ void writeRegister(uint8_t reg, uint16_t data) {
     buffer[0] = reg; // 寄存器地址
     buffer[1] = data >> 8; // 高位字节
     buffer[2] = data; // 低位字节
-
-    i2c_write(cartographer_i2c->i2c_config, 3, buffer);
+    i2c_dev_write(idm_i2c, 3, buffer);
 }
 
-void cartographer_sleep(uint32_t delay)
+void idm_sleep(uint32_t delay)
 {
-    uint32_t time=timer_read_time();
-    while(time+delay>timer_read_time()){}
+    uint32_t timeout = timer_read_time() + timer_from_us(delay);
+    for (;;) {
+        if (!timer_is_before(timer_read_time(), timeout))
+            break;
+    }
 }
 
 void configuration(void)
@@ -82,10 +92,24 @@ void configuration(void)
         writeRegister(addr[i],config[i]);
     }
 }
-void
-cartographer_init(void)
-{
 
+static uint_fast8_t
+idm_task_wakeup(struct timer *timer)
+{
+    sched_wake_task(&idm_update);
+    timer->waketime=timer->waketime+20000000;
+        return SF_RESCHEDULE;
+}
+static uint_fast8_t
+idm_delay_wakeup(struct timer *timer)
+{
+    sched_wake_task(&idm_delay);
+    timer->waketime=timer->waketime+timer_from_us(2000);
+        return SF_RESCHEDULE;
+}
+void
+idm_init(void)
+{
     /*uint64_t uid = 0;
     for (int i = 0; i < 8; i++) {
         uid = uid<<8;
@@ -95,136 +119,206 @@ cartographer_init(void)
         return;*/
     power=gpio_out_setup(1, 0);
     gpio_pwm_setup(2, 1, 2);
-    complete=gpio_in_setup(0,0);
+    //complete=gpio_in_setup(0,0);
     led=gpio_out_setup(10, 1);
     temp_in=gpio_adc_setup(26);
-    irq_disable();
-    cartographer_i2c= cartographer_mem_alloc(sizeof(*cartographer_i2c));
-    cartographer_i2c->i2c_config = i2c_setup(2, 400000, 0x2A);
-    cartographer_i2c->flags |= 2;
+    //irq_disable();
+    idm_i2c= idm_mem_alloc(sizeof(*idm_i2c));
+    idm_i2c->i2c_hw = i2c_setup(2,400000,0x2A);
+    idm_i2c->flags |= 2;
     configuration();
-    irq_enable();
+    idm_update_timer.waketime=timer_read_time()+100000;
+    delay_timer.waketime=timer_read_time()+100000;
+    idm_update_timer.func=idm_task_wakeup;
+    delay_timer.func=idm_delay_wakeup;
+    sched_add_timer(&idm_update_timer);
+    sched_add_timer(&delay_timer);
+    //irq_enable();
 }
-DECL_INIT(cartographer_init);
+DECL_INIT(idm_init);
+
+void turn_off_idm(void)
+{
+    sched_del_timer(&idm_update_timer);
+    gpio_out_write(led,1);
+}
 
 void
-command_cartographer_stream(uint32_t *args)
+command_idm_stream(uint32_t *args)
 {
+    irq_disable();
     if(args[0])
     {
-        cartographer_status=1;
+        idm_status=1;
     }
     else
     {
-        cartographer_status=0;
+        idm_status=0;
     }
+    irq_enable();
 }
-DECL_COMMAND(command_cartographer_stream,"cartographer_stream en=%u");
+DECL_COMMAND(command_idm_stream,"idm_stream en=%u");
 //切换激活状态
 void
-command_cartographer_set_threshold(uint32_t *args)
+command_idm_set_threshold(uint32_t *args)
 {
 	trigger_freq=args[0];
 	untrigger_freq=args[1];
 }
-DECL_COMMAND(command_cartographer_set_threshold,"cartographer_set_threshold trigger=%u untrigger=%u");
+DECL_COMMAND(command_idm_set_threshold,"idm_set_threshold trigger=%u untrigger=%u");
 
 void
-cartographer_home_task(void)
+idm_home_task(void)
 {
-    //if(!cartographer_home_flag)
-    //    return;
-    //if(cartographer_time+1000>timer_read_time())
-    //    return;
-    //cartographer_time=timer_read_time();
+    /*if(!idm_home_flag)
+    {
+        if(idm_hometime==-1)
+            idm_hometime=timer_read_time();
+        if(idm_hometime+10000000>timer_read_time()){
+            if(idm_hometime-10000000>timer_read_time())
+                idm_hometime=timer_read_time();
+            return;
+        }
+        idm_hometime=timer_read_time();
+    }*/
+    if(!idm_home_flag)
+        return;
+    if(trigger_method)
+    {
+	if(homing_freq==0)
+	{
+	    idm_hometime=timer_read_time();
+	    homing_freq = read_channel();
+	    return;
+	}
+	uint32_t time=timer_read_time();
+	
+	if(timer_is_before(time,idm_hometime+timer_from_us(dur*100)))
+	{
+	    return;
+	}
+	idm_hometime=time;
+	uint32_t data=read_channel();
+	if(current<6)
+	{
+	    stack[current]=data-homing_freq;
+	    homing_freq=data;
+	    current++;
+	    if(start==0)
+	    	return;
+	}
+	else
+	{
+	    start=1;
+	    current=0;
+	    stack[current]=data-homing_freq;
+	    homing_freq=data;
+	    current++;
+	}
+	int32_t avr=0;
+	for(int i=0;i<6;i++)
+	    avr+=stack[i];
+	avr=avr/6;
+	if(max>trigger_threshold+avr && max>100)
+	{
+	    trsync_do_trigger(idm_ts, idm_trigger_reason);
+	    homing_freq=0;
+	    for(int i=0;i<6;i++)
+	        stack[i]=0;
+	    start=0;
+	    max=0;
+	    current=0;
+	    }
+	else if(avr>max)
+	{
+	    max=avr;
+	}
+	//irq_disable();
+
+	//irq_enable();
+    }
+    else
+    {
+	uint32_t data = read_channel();
+	if(data==0)
+            return;
+	irq_disable();
+        if(data>trigger_freq)
+        {
+        
+	    trsync_do_trigger(idm_ts, idm_trigger_reason);
+	    gpio_out_write(led,1);	
+        }
+        else if(data<untrigger_freq)
+            gpio_out_write(led,0);
+        irq_enable();
+    }
+}
+DECL_TASK(idm_home_task);
+void
+command_idm_home(uint32_t *args)
+{
+    idm_ts=trsync_oid_lookup(args[0]);
+    idm_trigger_reason=args[1];
+    idm_trigger_invert=args[2];
+    trigger_threshold=args[3];
+    trigger_method=args[4];
+    homing_freq=0;
+    start=0;
+    max=0;
+    current=0;
+    idm_home_flag=1;
+}
+DECL_COMMAND(command_idm_home,"idm_home trsync_oid=%c trigger_reason=%c trigger_invert=%c threshold=%u trigger_method=%u");
+
+void
+command_idm_stop_home(uint32_t *args)
+{
+    idm_home_flag=0;
+    idm_ts=NULL;
+}
+DECL_COMMAND(command_idm_stop_home,"idm_stop_home");
+
+void
+command_idm_base_read(uint32_t *args)
+{
+    uint8_t data_len=args[0];
+    uint8_t offset=args[1];
+    uint32_t f_count=671088640;
+    uint16_t adc_count=55927;
+    uint64_t data=((uint64_t)adc_count)<<32 | f_count;
+    sendf("idm_base_data bytes=%*s offset=%hu", data_len, &data, offset);
+}
+DECL_COMMAND(command_idm_base_read,"idm_base_read len=%c offset=%hu");
+
+void
+idm_update_task(void)
+{
+    if((!idm_status)&(!sched_check_wake(&idm_update)))
+        return;
+    else if(!sched_check_wake(&idm_delay))
+        return;
+    uint32_t data,clock;
     //if(gpio_in_read(complete))
-    //    return;
-    uint32_t data = read_channel();
+    //    continue;
+    clock=timer_read_time();
+    data = read_channel();
     if(data==0)
         return;
-    irq_disable();
+    uint32_t temp = 0;
+    uint8_t j=0;
+    while(j<16)
+        if(gpio_adc_sample(temp_in)==0)
+        {
+            temp+=gpio_adc_read(temp_in);
+            j++;
+        }
+    sendf("idm_data clock=%u data=%u temp=%u", clock, data, temp);
     if(data>trigger_freq)
     {
-        if(cartographer_home_flag)
-	    trsync_do_trigger(cartographer_ts, cartographer_trigger_reason);
 	gpio_out_write(led,1);	
     }
     else if(data<untrigger_freq)
         gpio_out_write(led,0);
-    irq_enable();
 }
-DECL_TASK(cartographer_home_task);
-
-void
-command_cartographer_home(uint32_t *args)
-{
-    cartographer_ts=trsync_oid_lookup(args[0]);
-    cartographer_trigger_reason=args[1];
-    cartographer_trigger_invert=args[2];
-    cartographer_home_flag=1;
-}
-DECL_COMMAND(command_cartographer_home,"cartographer_home trsync_oid=%c trigger_reason=%c trigger_invert=%c");
-
-void
-command_cartographer_stop_home(uint32_t *args)
-{
-    cartographer_home_flag=0;
-    cartographer_ts=NULL;
-}
-DECL_COMMAND(command_cartographer_stop_home,"cartographer_stop_home");
-
-void
-command_cartographer_base_read(uint32_t *args)
-{
-    uint8_t data_len=args[0];
-    uint8_t offset=args[1];
-    uint32_t f_count=43890000;
-    uint16_t adc_count=55927;
-    uint64_t data=((uint64_t)adc_count)<<32 | f_count;
-    sendf("cartographer_base_data bytes=%*s offset=%hu", data_len, &data, offset);
-}
-DECL_COMMAND(command_cartographer_base_read,"cartographer_base_read len=%c offset=%hu");
-
-
-void
-cartographer_task(void)
-{
-    if(!cartographer_status)
-    {
-        if(cartographer_time==-1)
-            cartographer_time=timer_read_time();
-        if(cartographer_time+500000>timer_read_time()){
-            if(cartographer_time-500000>timer_read_time())
-                cartographer_time=timer_read_time();
-            return;
-        }
-        cartographer_time=timer_read_time();
-    }
-    uint32_t data,clock;
-    for(uint8_t i=0;i<1;i++)
-    {
-        //if(gpio_in_read(complete))
-        //    continue;
-        clock=timer_read_time();
-        data = read_channel();
-        if(data==0)
-            continue;
-        uint32_t temp = 0;
-        uint8_t j=0;
-        while(j<16)
-            if(gpio_adc_sample(temp_in)==0)
-            {
-                temp+=gpio_adc_read(temp_in);
-                j++;
-            }
-        if(!upload_skip)
-        {
-            sendf("cartographer_data clock=%u data=%u temp=%u", clock, data, temp);
-            upload_skip=1;    
-        }
-        else
-            upload_skip=0;
-    }
-}
-DECL_TASK(cartographer_task);
-
+DECL_TASK(idm_update_task);

@@ -11,9 +11,8 @@ from . import idex_modes
 class HybridCoreXZKinematics:
     def __init__(self, toolhead, config):
         self.printer = config.get_printer()
-        printer_config = config.getsection('printer')
         # itersolve parameters
-        self.rails = [ stepper.PrinterRail(config.getsection('stepper_x')),
+        self.rails = [ stepper.LookupRail(config.getsection('stepper_x')),
                        stepper.LookupMultiRail(config.getsection('stepper_y')),
                        stepper.LookupMultiRail(config.getsection('stepper_z'))]
         self.rails[2].get_endstops()[0][0].add_stepper(
@@ -22,33 +21,24 @@ class HybridCoreXZKinematics:
         self.rails[1].setup_itersolve('cartesian_stepper_alloc', b'y')
         self.rails[2].setup_itersolve('cartesian_stepper_alloc', b'z')
         ranges = [r.get_range() for r in self.rails]
-        self.axes_min = toolhead.Coord(*[r[0] for r in ranges], e=0.)
-        self.axes_max = toolhead.Coord(*[r[1] for r in ranges], e=0.)
+        self.axes_min = toolhead.Coord([r[0] for r in ranges])
+        self.axes_max = toolhead.Coord([r[1] for r in ranges])
         self.dc_module = None
         if config.has_section('dual_carriage'):
             dc_config = config.getsection('dual_carriage')
             # dummy for cartesian config users
-            dc_config.getchoice('axis', {'x': 'x'}, default='x')
+            dc_config.getchoice('axis', ['x'], default='x')
             # setup second dual carriage rail
-            self.rails.append(stepper.PrinterRail(dc_config))
+            self.rails.append(stepper.LookupRail(dc_config))
             self.rails[2].get_endstops()[0][0].add_stepper(
                 self.rails[3].get_steppers()[0])
-            self.rails[3].setup_itersolve('cartesian_stepper_alloc', b'z')
-            dc_rail_0 = idex_modes.DualCarriagesRail(
-                self.printer, self.rails[0], axis=0, active=True,
-                stepper_alloc_active=('corexz_stepper_alloc', b'-'),
-                stepper_alloc_inactive=('cartesian_reverse_stepper_alloc',b'z'))
-            dc_rail_1 = idex_modes.DualCarriagesRail(
-                self.printer, self.rails[3], axis=0, active=False,
-                stepper_alloc_active=('corexz_stepper_alloc', b'+'),
-                stepper_alloc_inactive=('cartesian_stepper_alloc', b'z'))
-            self.dc_module = idex_modes.DualCarriages(self.printer,
-                        dc_rail_0, dc_rail_1, axis=0)
+            self.rails[3].setup_itersolve('corexz_stepper_alloc', b'+')
+            self.dc_module = idex_modes.DualCarriages(
+                    self.printer, [self.rails[0]], [self.rails[3]], axes=[0],
+                    safe_dist=[dc_config.getfloat(
+                        'safe_distance', None, minval=0.)])
         for s in self.get_steppers():
             s.set_trapq(toolhead.get_trapq())
-            toolhead.register_step_generator(s.generate_steps)
-        self.printer.register_event_handler("stepper_enable:motor_off",
-                                                    self._motor_off)
         # Setup boundary checks
         max_velocity, max_accel = toolhead.get_max_velocity()
         self.max_z_velocity = config.getfloat(
@@ -60,9 +50,9 @@ class HybridCoreXZKinematics:
         return [s for rail in self.rails for s in rail.get_steppers()]
     def calc_position(self, stepper_positions):
         pos = [stepper_positions[rail.get_name()] for rail in self.rails]
-        if (self.dc_module is not None and 'CARRIAGE_1' == \
-                    self.dc_module.get_status()['active_carriage']):
-            return [pos[0] - pos[2], pos[1], pos[2]]
+        if (self.dc_module is not None and 'PRIMARY' == \
+                    self.dc_module.get_status()['carriage_1']):
+            return [pos[3] - pos[2], pos[1], pos[2]]
         else:
             return [pos[0] + pos[2], pos[1], pos[2]]
     def update_limits(self, i, range):
@@ -71,17 +61,22 @@ class HybridCoreXZKinematics:
         # otherwise leave in un-homed state.
         if l <= h:
             self.limits[i] = range
-    def override_rail(self, i, rail):
-        self.rails[i] = rail
     def set_position(self, newpos, homing_axes):
         for i, rail in enumerate(self.rails):
             rail.set_position(newpos)
-            if i in homing_axes:
-                self.limits[i] = rail.get_range()
-    def note_z_not_homed(self):
-        # Helper for Safe Z Home
-        self.limits[2] = (1.0, -1.0)
-    def _home_axis(self, homing_state, axis, rail):
+        for axis_name in homing_axes:
+            axis = "xyz".index(axis_name)
+            rail = None
+            if self.dc_module and axis == 0:
+                rail = self.dc_module.get_primary_rail(axis)
+            if rail is None:
+                rail = self.rails[axis]
+            self.limits[axis] = rail.get_range()
+    def clear_homing_state(self, clear_axes):
+        for axis, axis_name in enumerate("xyz"):
+            if axis_name in clear_axes:
+                self.limits[axis] = (1.0, -1.0)
+    def home_axis(self, homing_state, axis, rail):
         position_min, position_max = rail.get_range()
         hi = rail.get_homing_info()
         homepos = [None, None, None, None]
@@ -95,16 +90,10 @@ class HybridCoreXZKinematics:
         homing_state.home_rails([rail], forcepos, homepos)
     def home(self, homing_state):
         for axis in homing_state.get_axes():
-            if (self.dc_module is not None and axis == 0):
-                self.dc_module.save_idex_state()
-                for i in [0,1]:
-                    self.dc_module.toggle_active_dc_rail(i)
-                    self._home_axis(homing_state, axis, self.rails[0])
-                self.dc_module.restore_idex_state()
+            if self.dc_module is not None and axis == 0:
+                self.dc_module.home(homing_state, axis)
             else:
-                self._home_axis(homing_state, axis, self.rails[axis])
-    def _motor_off(self, print_time):
-        self.limits = [(1.0, -1.0)] * 3
+                self.home_axis(homing_state, axis, self.rails[axis])
     def _check_endstops(self, move):
         end_pos = move.end_pos
         for i in (0, 1, 2):
