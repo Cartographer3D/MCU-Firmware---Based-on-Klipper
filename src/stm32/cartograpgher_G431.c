@@ -8,7 +8,7 @@
 #include "internal.h" // GPIO
 #include "board/irq.h" // irq_disable
 #define num 10
-
+DECL_CONSTANT("CARTOGRAPHER_SENSOR_FREQ_DIVISOR", 8);
 DECL_CONSTANT("CARTOGRAPHER_ADC_SMOOTH_COUNT", 16);
 uint32_t trigger_freq=33784425,untrigger_freq=33581718;
 uint8_t idm_trigger_reason,idm_trigger_invert;
@@ -135,7 +135,7 @@ idm_init(void)
     #endif
     //gpio_out_setup(GPIO('A', 3), 0);
     idm_sleep(50000);
-    gpio_pwm_setup(GPIO('B', 6), 6, 1<<14);
+    gpio_pwm_setup(GPIO('B', 6), 8, 1<<14);
     //complete=gpio_in_setup(GPIO('B', 4),0);
     led=gpio_out_setup(GPIO('A', 15), 0);
     temp_in=gpio_adc_setup(GPIO('A', 4));

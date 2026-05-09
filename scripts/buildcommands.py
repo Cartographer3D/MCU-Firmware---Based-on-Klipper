@@ -565,7 +565,7 @@ class HandleVersions:
     def update_data_dictionary(self, data):
         data['version'] = self.config_version
         data['build_versions'] = ""#self.toolstr
-        data['app'] = 'Klipper'
+        data['app'] = 'Cartographer'
         data['license'] = 'GNU GPLv3'
     def generate_code(self, options):
         cleanbuild, self.toolstr = tool_versions(options.tools)
